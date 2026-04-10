@@ -96,7 +96,31 @@ export interface CheckInListParams {
   offset?: number;
 }
 
+export interface AreaVoluntariado {
+  id: string;
+  nome: string;
+}
+
+export interface VoluntariadoPublicPayload {
+  fullName: string;
+  preferredName?: string;
+  email: string;
+  cpf: string;
+  phone: string;
+  birthDate: string;
+  areaVoluntariadoId: string;
+  dataInicio: string;
+  observacao?: string;
+}
+
 const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+const publicApi = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
@@ -123,6 +147,12 @@ export const eventsAPI = {
   list: () => api.get<EventSummary[]>("/api/admin/events"),
   getById: (id: string) => api.get(`/api/admin/events/${id}`),
   getTicketsSummary: (eventId: string) => api.get(`/api/admin/events/${eventId}/tickets-summary`),
+};
+
+export const voluntariadoPublicAPI = {
+  listarAreas: () => publicApi.get<AreaVoluntariado[]>("/api/public/voluntariado/areas"),
+  cadastrar: (payload: VoluntariadoPublicPayload) =>
+    publicApi.post("/api/public/voluntariado", payload),
 };
 
 const checkInAPI = {

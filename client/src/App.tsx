@@ -10,6 +10,7 @@ import Events from "./pages/Events";
 import CheckIn from "./pages/CheckIn";
 import Home from "./pages/Home";
 import RegistroCulto from "./pages/RegistroCulto";
+import VoluntariadoPublico from "./pages/VoluntariadoPublico";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -35,6 +36,8 @@ function Router() {
       <Route path={"/checkin/:eventId"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/cultos"} component={() => <ProtectedRoute component={RegistroCulto} />} />
       <Route path={"/cultos/:id"} component={() => <ProtectedRoute component={RegistroCulto} />} />
+      <Route path={"/voluntariado"} component={VoluntariadoPublico} />
+      <Route path={"/voluntariado/cadastro"} component={VoluntariadoPublico} />
       <Route path={"/:eventId"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/:eventId/checkin"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/"} component={Login} />
