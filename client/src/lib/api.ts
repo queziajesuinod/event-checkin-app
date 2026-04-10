@@ -21,6 +21,10 @@ export interface EventSummary {
   startDate?: string | null;
   endDate?: string | null;
   date?: string | null;
+  isActive?: boolean;
+  active?: boolean;
+  ativo?: boolean;
+  status?: string | null;
   location?: string;
   description?: string;
 }

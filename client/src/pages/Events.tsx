@@ -19,6 +19,126 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const asText = (value: unknown) => (typeof value === 'string' ? value : undefined);
 const isEventSummary = (value: unknown): value is EventSummary =>
   isRecord(value) && typeof value.id === 'string';
+const ACTIVE_STATUSES = new Set([
+  'active',
+  'ativo',
+  'open',
+  'opened',
+  'aberto',
+  'ongoing',
+  'running',
+  'published',
+  'publicado',
+]);
+const INACTIVE_STATUSES = new Set([
+  'inactive',
+  'inativo',
+  'closed',
+  'encerrado',
+  'finished',
+  'finalizado',
+  'cancelled',
+  'cancelado',
+  'disabled',
+  'desativado',
+  'archived',
+  'arquivado',
+  'draft',
+  'rascunho',
+]);
+const BOOLEANISH_TRUE = new Set(['1', 'true', 'yes', 'sim', 'y', 's']);
+const BOOLEANISH_FALSE = new Set(['0', 'false', 'no', 'nao', 'n', 'off']);
+
+const parseEventDate = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const normalizeStatusText = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const parseBooleanish = (value: unknown): boolean | null => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return null;
+  }
+  if (typeof value !== 'string') return null;
+
+  const normalized = normalizeStatusText(value);
+  if (BOOLEANISH_TRUE.has(normalized)) return true;
+  if (BOOLEANISH_FALSE.has(normalized)) return false;
+  return null;
+};
+
+const resolveStatusActiveFlag = (status: unknown) => {
+  const fromBooleanish = parseBooleanish(status);
+  if (fromBooleanish !== null) return fromBooleanish;
+  if (typeof status !== 'string') return null;
+
+  const normalized = normalizeStatusText(status);
+  if (ACTIVE_STATUSES.has(normalized)) return true;
+  if (INACTIVE_STATUSES.has(normalized)) return false;
+  return null;
+};
+
+const isEventActive = (event: EventSummary, now = new Date()) => {
+  const eventData = event as EventSummary & Record<string, unknown>;
+  const explicitCandidates: unknown[] = [
+    event.isActive,
+    event.active,
+    event.ativo,
+    eventData.is_active,
+    eventData.enabled,
+    eventData.isEnabled,
+    eventData.is_enabled,
+  ];
+
+  for (const candidate of explicitCandidates) {
+    const parsed = parseBooleanish(candidate);
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+
+  const statusCandidates: unknown[] = [
+    event.status,
+    eventData.status,
+    eventData.state,
+    eventData.situacao,
+  ];
+  for (const statusCandidate of statusCandidates) {
+    const statusFlag = resolveStatusActiveFlag(statusCandidate);
+    if (statusFlag !== null) {
+      return statusFlag;
+    }
+  }
+
+  const endDate = parseEventDate(event.endDate);
+  if (endDate) {
+    return endDate.getTime() >= now.getTime();
+  }
+
+  const startDate = parseEventDate(event.startDate || event.date);
+  if (startDate) {
+    const endOfDay = new Date(startDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    return endOfDay.getTime() >= now.getTime();
+  }
+
+  return true;
+};
+
+const filterActiveEvents = (events: EventSummary[]) => {
+  const now = new Date();
+  return events.filter((event) => isEventActive(event, now));
+};
 
 const normalizeEventsPayload = (payload: unknown) => {
   if (Array.isArray(payload)) {
@@ -54,6 +174,10 @@ const sanitizeEventForOffline = (event: EventSummary): EventSummary => {
     startDate: event.startDate,
     endDate: event.endDate,
     date: event.date,
+    isActive: event.isActive,
+    active: event.active,
+    ativo: event.ativo,
+    status: event.status,
   };
 };
 
@@ -113,11 +237,11 @@ export default function Events() {
 
   const loadEventsFromCache = () => {
     const cached = readEventsCache();
-    if (!cached || cached.events.length === 0) {
+    if (!cached) {
       return false;
     }
 
-    setEvents(cached.events);
+    setEvents(filterActiveEvents(cached.events));
     setOfflineSyncedAt(cached.syncedAt || null);
     setLoadedFromCache(true);
     return true;
@@ -129,7 +253,7 @@ export default function Events() {
 
     try {
       const response = await eventsAPI.list();
-      const data = normalizeEventsPayload(response.data);
+      const data = filterActiveEvents(normalizeEventsPayload(response.data));
       setEvents(data);
       setLoadedFromCache(false);
       persistEventsCache(data);
