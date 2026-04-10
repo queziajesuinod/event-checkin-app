@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "event-checkin-app",
-    "slug": "event-checkin-app",
+    "name": "portaliecg-app",
+    "slug": "portaliecg-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

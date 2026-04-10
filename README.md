@@ -34,7 +34,7 @@ A modern React-based web application for event check-in with support for QR code
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd event-checkin-app
+cd portaliecg-app
 ```
 
 2. Install dependencies:

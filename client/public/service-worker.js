@@ -1,4 +1,4 @@
-const CACHE_NAME = "event-checkin-app-v2";
+const CACHE_NAME = "portaliecg-app-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
