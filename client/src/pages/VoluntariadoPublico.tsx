@@ -67,7 +67,7 @@ const INITIAL_FORM: VoluntariadoPublicPayload = {
   cpf: "",
   phone: "",
   birthDate: "",
-  areaVoluntariadoId: "",
+  areaVoluntariadoIds: [],
   dataInicio: getTodayDate(),
 };
 
@@ -96,10 +96,6 @@ export default function VoluntariadoPublico() {
         if (!mounted) return;
 
         setAreas(parsedAreas);
-        setFormData((prev) => ({
-          ...prev,
-          areaVoluntariadoId: prev.areaVoluntariadoId || parsedAreas[0]?.id || "",
-        }));
       } catch (loadError) {
         if (!mounted) return;
         setError(getErrorMessage(loadError));
@@ -127,11 +123,23 @@ export default function VoluntariadoPublico() {
     }));
   };
 
+  const handleAreaToggle = (areaId: string) => {
+    setFormData((prev) => {
+      const alreadySelected = prev.areaVoluntariadoIds.includes(areaId);
+      return {
+        ...prev,
+        areaVoluntariadoIds: alreadySelected
+          ? prev.areaVoluntariadoIds.filter((id) => id !== areaId)
+          : [...prev.areaVoluntariadoIds, areaId],
+      };
+    });
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!formData.areaVoluntariadoId) {
-      setError("Selecione uma area de voluntariado.");
+    if (formData.areaVoluntariadoIds.length === 0) {
+      setError("Selecione pelo menos uma area de voluntariado.");
       return;
     }
 
@@ -145,7 +153,7 @@ export default function VoluntariadoPublico() {
         cpf: formData.cpf,
         phone: formData.phone,
         birthDate: formData.birthDate,
-        areaVoluntariadoId: formData.areaVoluntariadoId,
+        areaVoluntariadoIds: formData.areaVoluntariadoIds,
         dataInicio: formData.dataInicio,
       };
 
@@ -273,26 +281,53 @@ export default function VoluntariadoPublico() {
                 />
               </label>
 
-              <label className="text-sm font-semibold" style={{ color: C.navy }}>
-                Area de voluntariado
-                <select
-                  value={formData.areaVoluntariadoId}
-                  onChange={(event) => updateField("areaVoluntariadoId", event.target.value)}
-                  required
-                  disabled={isSubmitting || isLoadingAreas}
-                  className="mt-1 h-11 w-full rounded-xl border px-3 text-sm outline-none focus:ring-2"
-                  style={{ borderColor: "#D1D5DB", color: C.navy }}
+              <fieldset className="text-sm font-semibold sm:col-span-2" style={{ color: C.navy }}>
+                <legend className="mb-2">Areas de voluntariado</legend>
+                <div
+                  className="rounded-xl border p-3"
+                  style={{ borderColor: "#D1D5DB", backgroundColor: "#FAFAFA" }}
                 >
-                  {isLoadingAreas && <option value="">Carregando areas...</option>}
-                  {!isLoadingAreas && areas.length === 0 && <option value="">Nenhuma area disponivel</option>}
-                  {!isLoadingAreas &&
-                    areas.map((area) => (
-                      <option key={area.id} value={area.id}>
-                        {area.nome}
-                      </option>
-                    ))}
-                </select>
-              </label>
+                  {isLoadingAreas && (
+                    <p className="text-sm font-normal" style={{ color: "#6B7280" }}>
+                      Carregando areas...
+                    </p>
+                  )}
+
+                  {!isLoadingAreas && areas.length === 0 && (
+                    <p className="text-sm font-normal" style={{ color: "#6B7280" }}>
+                      Nenhuma area disponivel
+                    </p>
+                  )}
+
+                  {!isLoadingAreas && areas.length > 0 && (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {areas.map((area) => {
+                        const checked = formData.areaVoluntariadoIds.includes(area.id);
+                        return (
+                          <label
+                            key={area.id}
+                            className="flex items-center gap-2 rounded-lg border px-3 py-2 font-medium"
+                            style={{
+                              borderColor: checked ? C.gold : "#E5E7EB",
+                              backgroundColor: checked ? "#FBF5E6" : C.white,
+                              color: C.navy,
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => handleAreaToggle(area.id)}
+                              disabled={isSubmitting || isLoadingAreas}
+                              className="h-4 w-4"
+                            />
+                            <span className="text-sm">{area.nome}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </fieldset>
 
               <label className="text-sm font-semibold" style={{ color: C.navy }}>
                 Data de inicio

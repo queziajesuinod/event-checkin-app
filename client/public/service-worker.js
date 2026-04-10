@@ -1,4 +1,4 @@
-const CACHE_NAME = "portaliecg-app-v2";
+const CACHE_NAME = "portaliecg-app-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -36,7 +36,15 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match("/index.html")),
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok) {
+            return response;
+          }
+
+          return caches.match("/index.html").then((cachedIndex) => cachedIndex || response);
+        })
+        .catch(() => caches.match("/index.html")),
     );
     return;
   }

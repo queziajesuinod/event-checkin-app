@@ -108,7 +108,7 @@ export interface VoluntariadoPublicPayload {
   cpf: string;
   phone: string;
   birthDate: string;
-  areaVoluntariadoId: string;
+  areaVoluntariadoIds: string[];
   dataInicio: string;
   observacao?: string;
 }

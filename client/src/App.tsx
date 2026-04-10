@@ -37,7 +37,9 @@ function Router() {
       <Route path={"/cultos"} component={() => <ProtectedRoute component={RegistroCulto} />} />
       <Route path={"/cultos/:id"} component={() => <ProtectedRoute component={RegistroCulto} />} />
       <Route path={"/voluntariado"} component={VoluntariadoPublico} />
+      <Route path={"/voluntariado/"} component={VoluntariadoPublico} />
       <Route path={"/voluntariado/cadastro"} component={VoluntariadoPublico} />
+      <Route path={"/cadastro-voluntariado"} component={VoluntariadoPublico} />
       <Route path={"/:eventId"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/:eventId/checkin"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/"} component={Login} />
