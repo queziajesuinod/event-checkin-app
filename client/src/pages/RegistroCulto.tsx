@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserMenu } from '@/components/UserMenu';
 import { cultosAPI, type Campus, type Ministerio, type TipoEvento, type Ministro, type RegistroCulto } from '@/lib/api';
 import { BookOpen, CalendarDays, Check, ChevronDown, CloudOff, Download, Loader2, MapPin, MessageSquare, Minus, Plus, Users, Wifi, WifiOff, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import { toast } from 'sonner';
 import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -79,6 +79,24 @@ function Counter({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  const startRepeat = (direction: 1 | -1) => {
+    const step = () => onChange(Math.max(0, valueRef.current + direction));
+    step();
+    timeoutRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(step, 80);
+    }, 400);
+  };
+
+  const stopRepeat = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  };
+
   return (
     <div
       className="flex flex-col gap-2 rounded-xl p-3"
@@ -90,14 +108,20 @@ function Counter({
       <div className="flex items-center justify-center gap-2">
         <button
           type="button"
-          onClick={() => onChange(Math.max(0, value - 1))}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90"
+          onMouseDown={() => startRepeat(-1)}
+          onMouseUp={stopRepeat}
+          onMouseLeave={stopRepeat}
+          onTouchStart={() => startRepeat(-1)}
+          onTouchEnd={stopRepeat}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 select-none"
           style={{ backgroundColor: C.white, border: `1.5px solid #E5E7EB` }}
         >
           <Minus className="w-3.5 h-3.5" style={{ color: C.blue }} />
         </button>
         <input
           type="number"
+          inputMode="numeric"
+          pattern="[0-9]*"
           min={0}
           value={value}
           onChange={(e) => onChange(parseInt(e.target.value) || 0)}
@@ -106,8 +130,12 @@ function Counter({
         />
         <button
           type="button"
-          onClick={() => onChange(value + 1)}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90"
+          onMouseDown={() => startRepeat(1)}
+          onMouseUp={stopRepeat}
+          onMouseLeave={stopRepeat}
+          onTouchStart={() => startRepeat(1)}
+          onTouchEnd={stopRepeat}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 select-none"
           style={{ backgroundColor: C.blue }}
         >
           <Plus className="w-3.5 h-3.5 text-white" />
@@ -200,7 +228,7 @@ const FORM_INICIAL: Omit<RegistroCulto, 'id' | 'ministros' | 'campus'> = {
 };
 
 const RegistroCulto = () => {
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const params = useParams();
   const isEditing = Boolean(params.id);
 
@@ -213,7 +241,6 @@ const RegistroCulto = () => {
 
   const [loadingInit, setLoadingInit] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [newMinistroName, setNewMinistroName] = useState('');
   const [openMinistros, setOpenMinistros] = useState(false);
   const [loadingMinistro, setLoadingMinistro] = useState(false);
   const [searchValue, setSearchValue] = useState('');
@@ -396,21 +423,21 @@ const RegistroCulto = () => {
   };
 
   const montarPayload = () => {
-    const payload = { ...form };
     const min = ministerios.find((m) => m.id === form.ministerioId);
-    if (min && !min.exibeCriancas) payload.qtdCriancas = null;
-    if (min && !min.exibeBebes) payload.qtdBebes = null;
     const campus = campi.find((c) => c.id === form.campusId);
-    if (!(campus?.transmiteOnline && min?.exibeOnline !== false)) payload.qtdOnline = null;
-    if (!form.teveApelo) payload.qtdApelo = null;
-    if (!form.eSerie) payload.nomeSerie = null;
-    ['qtdHomens', 'qtdMulheres', 'qtdCriancas', 'qtdBebes', 'qtdVoluntarios', 'qtdOnline', 'qtdApelo']
-      .forEach((k) => { if (payload[k] != null) payload[k] = parseInt(payload[k], 10) || 0; });
-    payload.ministroIds = selectedMinistros.map((m) => m.id);
-    return payload;
+
+    return {
+      ...form,
+      qtdCriancas: min && !min.exibeCriancas ? undefined : form.qtdCriancas,
+      qtdBebes: min && !min.exibeBebes ? undefined : form.qtdBebes,
+      qtdOnline: !(campus?.transmiteOnline && min?.exibeOnline !== false) ? undefined : form.qtdOnline,
+      qtdApelo: !form.teveApelo ? undefined : form.qtdApelo,
+      nomeSerie: !form.eSerie ? undefined : form.nomeSerie,
+      ministroIds: selectedMinistros.map((m) => m.id),
+    };
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (selectedMinistros.length === 0) {
       toast.error('Selecione ao menos um ministro');
