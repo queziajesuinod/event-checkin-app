@@ -7,17 +7,45 @@ interface User {
   email: string;
   name: string;
   accessToken: string;
-  perfil?: string;
+  perfis: string[];
 }
 
-function decodeJwtPerfil(token: string): string | undefined {
+interface JwtPayload {
+  id?: string;
+  sub?: string;
+  nome?: string;
+  name?: string;
+  perfil?: string;
+  perfis?: string[];
+}
+
+function decodeJwtPayload(token: string): JwtPayload | null {
   try {
     const payload = token.split('.')[1];
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-    return decoded.perfil;
+    if (!payload) return null;
+
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedBase64 = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const binary = atob(paddedBase64);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const decoded = JSON.parse(new TextDecoder().decode(bytes));
+
+    return decoded as JwtPayload;
   } catch {
-    return undefined;
+    return null;
   }
+}
+
+function decodeJwtPerfis(payload: JwtPayload | null): string[] {
+  if (Array.isArray(payload?.perfis)) return payload.perfis as string[];
+  if (typeof payload?.perfil === 'string') return [payload.perfil];
+  return [];
+}
+
+function decodeJwtNome(payload: JwtPayload | null): string | null {
+  if (typeof payload?.nome === 'string' && payload.nome.trim()) return payload.nome.trim();
+  if (typeof payload?.name === 'string' && payload.name.trim()) return payload.name.trim();
+  return null;
 }
 
 interface AuthContextType {
@@ -46,11 +74,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const parsedUser = JSON.parse(storedUser) as User;
+      const parsedUser = JSON.parse(storedUser) as User & { perfil?: string };
       if (!parsedUser?.email) {
         return null;
       }
-      return { user: parsedUser, token: storedToken };
+
+      const payload = decodeJwtPayload(storedToken);
+      const decodedNome = decodeJwtNome(payload);
+      const decodedPerfis = decodeJwtPerfis(payload);
+
+      if (!Array.isArray(parsedUser.perfis)) {
+        parsedUser.perfis = parsedUser.perfil ? [parsedUser.perfil] : [];
+      }
+      if (decodedPerfis.length > 0) {
+        parsedUser.perfis = decodedPerfis;
+      }
+      if (decodedNome) {
+        parsedUser.name = decodedNome;
+      } else if (!parsedUser.name) {
+        parsedUser.name = parsedUser.email;
+      }
+
+      return { user: parsedUser as User, token: storedToken };
     } catch {
       return null;
     }
@@ -63,6 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(storedSession.user);
       setHasOfflineSession(true);
       setOfflineSessionEmail(storedSession.user.email);
+      localStorage.setItem('user', JSON.stringify(storedSession.user));
     } else {
       localStorage.removeItem('user');
       localStorage.removeItem('authToken');
@@ -92,17 +138,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authAPI.login(email, password);
       const data = response.data;
-      const userData: User = {
-        id: data.userId || data.id || email,
-        email,
-        name: data.nome || data.name || email,
-        accessToken: data.accessToken || '',
-        perfil: decodeJwtPerfil(data.accessToken || ''),
-      };
 
       if (!data.accessToken) {
         throw new Error('Login failed');
       }
+
+      const payload = decodeJwtPayload(data.accessToken);
+      const decodedNome = decodeJwtNome(payload);
+      const userData: User = {
+        id: data.userId || data.id || payload?.sub || payload?.id || email,
+        email,
+        name: decodedNome || data.nome || data.name || email,
+        accessToken: data.accessToken,
+        perfis: decodeJwtPerfis(payload),
+      };
 
       localStorage.setItem('authToken', data.accessToken);
       localStorage.setItem('user', JSON.stringify(userData));

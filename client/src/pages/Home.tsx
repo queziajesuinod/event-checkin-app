@@ -94,10 +94,10 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
 
-  const perfil = user?.perfil ?? "";
-  const isAdmin = perfil === "Administrador";
-  const showEventos = isAdmin || perfil === "EVENTOS";
-  const showCultos = isAdmin || perfil === "BACKSTAGE";
+  const perfis = user?.perfis ?? [];
+  const isAdmin = perfis.includes("Administrador");
+  const showEventos = isAdmin || perfis.includes("EVENTOS");
+  const showCultos = isAdmin || perfis.includes("BACKSTAGE");
 
   const handleLogout = () => {
     logout();
