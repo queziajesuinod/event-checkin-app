@@ -207,6 +207,20 @@ const writeCultosQueue = (queue: OfflineQueuedCulto[]) => {
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 
+const getStoredUserId = (): string | undefined => {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return undefined;
+
+    const parsed = JSON.parse(raw) as { id?: unknown; userId?: unknown };
+    if (typeof parsed.id === 'string' && parsed.id.trim()) return parsed.id.trim();
+    if (typeof parsed.userId === 'string' && parsed.userId.trim()) return parsed.userId.trim();
+    return undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 const FORM_INICIAL: Omit<RegistroCulto, 'id' | 'ministros' | 'campus'> = {
   data: hoje(),
   horario: '',
@@ -422,9 +436,10 @@ const RegistroCulto = () => {
     }
   };
 
-  const montarPayload = () => {
+  const montarPayload = (includeUserId = false) => {
     const min = ministerios.find((m) => m.id === form.ministerioId);
     const campus = campi.find((c) => c.id === form.campusId);
+    const userId = includeUserId ? getStoredUserId() : undefined;
 
     return {
       ...form,
@@ -434,6 +449,7 @@ const RegistroCulto = () => {
       qtdApelo: !form.teveApelo ? undefined : form.qtdApelo,
       nomeSerie: !form.eSerie ? undefined : form.nomeSerie,
       ministroIds: selectedMinistros.map((m) => m.id),
+      ...(userId ? { userId } : {}),
     };
   };
 
@@ -445,7 +461,7 @@ const RegistroCulto = () => {
     }
     setLoading(true);
     try {
-      const payload = montarPayload();
+      const payload = montarPayload(!isEditing);
       const snapshot = {
         form: { ...form },
         ministros: [...selectedMinistros],

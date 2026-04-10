@@ -167,6 +167,7 @@ export interface Ministro {
 
 export interface RegistroCulto {
   id?: string;
+  userId?: string;
   data: string;
   horario: string;
   campusId: string;
