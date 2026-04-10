@@ -1,5 +1,5 @@
 /**
- * Manus Debug Collector (agent-friendly)
+ * App Debug Collector (agent-friendly)
  *
  * Captures:
  * 1) Console logs
@@ -13,7 +13,7 @@
   "use strict";
 
   // Prevent double initialization
-  if (window.__MANUS_DEBUG_COLLECTOR__) return;
+  if (window.__APP_DEBUG_COLLECTOR__) return;
 
   // ==========================================================================
   // Configuration
@@ -811,7 +811,7 @@
   }
 
   // Mark as initialized
-  window.__MANUS_DEBUG_COLLECTOR__ = {
+  window.__APP_DEBUG_COLLECTOR__ = {
     version: "2.0-no-rrweb",
     store: store,
     forceReport: reportLogs,

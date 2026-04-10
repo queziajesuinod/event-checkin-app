@@ -1,49 +1,57 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Home } from "lucide-react";
 import { useLocation } from "wouter";
+
+const C = {
+  navy: "#0A1F3F",
+  blue: "#1B4D8E",
+  surface: "#F0F2F5",
+  gold: "#C9A84C",
+};
 
 export default function NotFound() {
   const [, setLocation] = useLocation();
 
-  const handleGoHome = () => {
-    setLocation("/");
-  };
-
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-      <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardContent className="pt-8 pb-8 text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-red-100 rounded-full animate-pulse" />
-              <AlertCircle className="relative h-16 w-16 text-red-500" />
-            </div>
+    <div
+      className="min-h-screen flex flex-col items-center justify-center px-4"
+      style={{ backgroundColor: C.surface }}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl p-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500"
+        style={{ backgroundColor: "#fff", boxShadow: "0 8px 32px rgba(10,31,63,0.12)" }}
+      >
+        <div className="flex justify-center mb-6">
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "#FEF2F2" }}
+          >
+            <AlertCircle className="w-8 h-8" style={{ color: "#DC2626" }} />
           </div>
+        </div>
 
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">404</h1>
+        <h1 className="text-5xl font-extrabold mb-2" style={{ color: C.navy }}>
+          404
+        </h1>
+        <h2 className="text-lg font-semibold mb-3" style={{ color: C.blue }}>
+          Página não encontrada
+        </h2>
+        <p className="text-sm mb-8" style={{ color: "#6B7280" }}>
+          A página que você está procurando não existe ou foi removida.
+        </p>
 
-          <h2 className="text-xl font-semibold text-slate-700 mb-4">
-            Page Not Found
-          </h2>
+        <button
+          onClick={() => setLocation("/")}
+          className="w-full h-11 rounded-xl text-white font-semibold text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+          style={{ backgroundColor: C.blue }}
+        >
+          <Home className="w-4 h-4" />
+          Ir para o início
+        </button>
+      </div>
 
-          <p className="text-slate-600 mb-8 leading-relaxed">
-            Sorry, the page you are looking for doesn't exist.
-            <br />
-            It may have been moved or deleted.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              onClick={handleGoHome}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <Home className="w-4 h-4 mr-2" />
-              Go Home
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <p className="text-xs mt-8" style={{ color: "#B0B7C3" }}>
+        IECG · Portal Gerencial
+      </p>
     </div>
   );
 }
