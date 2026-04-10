@@ -1,7 +1,7 @@
 {
-  "name": "Event Check-in App",
-  "short_name": "Check-in",
-  "description": "Event check-in application with offline support.",
+  "name": "Portal Gerencial - IECG",
+  "short_name": "IECG App",
+  "description": "Portal Gerencial da IECG - Igreja Evangélica Comunidade Global",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
