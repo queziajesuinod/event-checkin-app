@@ -1,5 +1,5 @@
-import { UserMenu } from '@/components/UserMenu';
 import { useAuth } from '@/contexts/AuthContext';
+import { useHeader } from '@/contexts/HeaderContext';
 import { eventsAPI, type EventSummary } from '@/lib/api';
 import { Calendar, ChevronRight, Download, Loader2, MapPin, Users, Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -204,6 +204,7 @@ const readEventsCache = () => {
 
 export default function Events() {
   const { user } = useAuth();
+  useHeader({ backTo: '/home', backLabel: 'Início' });
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -355,19 +356,6 @@ export default function Events() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F0F2F5' }}>
-
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-20" style={{ backgroundColor: '#0A1F3F', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px' }}>
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <img
-            src="https://images.squarespace-cdn.com/content/v1/5bc9186e34c4e27773d92870/1546175613378-UHI78Z3KGSEOFFJEAP0B/logo-site.png"
-            alt="IECG"
-            className="h-7 w-auto"
-            style={{ filter: 'brightness(0) invert(1)' }}
-          />
-          <UserMenu showBackButton backTo="/home" backLabel="← Início" />
-        </div>
-      </header>
 
       {/* ── Barra offline colapsável ── */}
       <div style={{

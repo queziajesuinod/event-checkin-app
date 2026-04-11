@@ -10,6 +10,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(() =>
@@ -41,6 +42,33 @@ export default function Login() {
   }, [isAuthLoading, user, setLocation]);
 
   useEffect(() => {
+    const saved = localStorage.getItem('savedCredentials');
+    if (saved) {
+      try {
+        const { email: savedEmail, password: savedPassword } = JSON.parse(saved);
+        if (savedEmail) setEmail(savedEmail);
+        if (savedPassword) setPassword(savedPassword);
+        setRememberMe(true);
+
+        // auto-login silencioso
+        if (savedEmail && savedPassword) {
+          setIsLoading(true);
+          login(savedEmail, savedPassword)
+            .then(() => setLocation('/home'))
+            .catch(() => {
+              // falhou (ex: offline ou senha mudou) — mostra o form preenchido
+              setIsLoading(false);
+            });
+        }
+      } catch {
+        // ignore
+      }
+    } else if (offlineSessionEmail) {
+      setEmail(offlineSessionEmail);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!email && offlineSessionEmail) setEmail(offlineSessionEmail);
   }, [offlineSessionEmail, email]);
 
@@ -50,6 +78,11 @@ export default function Login() {
     setIsLoading(true);
     try {
       await login(email, password);
+      if (rememberMe) {
+        localStorage.setItem('savedCredentials', JSON.stringify({ email, password }));
+      } else {
+        localStorage.removeItem('savedCredentials');
+      }
       setLocation('/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha no login. Verifique suas credenciais.');
@@ -227,7 +260,7 @@ export default function Login() {
             <div className="relative">
               <Mail
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                style={{ color: 'rgba(255,255,255,0.35)' }}
+                style={{ color: email ? 'rgba(255,255,255,0.35)' : '#0A1F3F' }}
               />
               <input
                 type="email"
@@ -237,10 +270,11 @@ export default function Login() {
                 required
                 disabled={isLoading}
                 autoComplete="email"
-                className="w-full h-14 pl-11 pr-4 rounded-2xl text-white text-sm outline-none transition-all duration-200 disabled:opacity-60"
+                className="w-full h-14 pl-11 pr-4 rounded-2xl text-sm outline-none transition-all duration-200 disabled:opacity-60 placeholder:text-[#0A1F3F]/50"
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  backgroundColor: email ? 'rgba(255,255,255,0.08)' : '#ffffff',
                   border: '1px solid rgba(255,255,255,0.1)',
+                  color: email ? '#ffffff' : '#0A1F3F',
                 }}
                 onFocus={(e) => (e.currentTarget.style.border = '1px solid rgba(201,168,76,0.6)')}
                 onBlur={(e) => (e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)')}
@@ -251,7 +285,7 @@ export default function Login() {
             <div className="relative">
               <Lock
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                style={{ color: 'rgba(255,255,255,0.35)' }}
+                style={{ color: password ? 'rgba(255,255,255,0.35)' : '#0A1F3F' }}
               />
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -261,10 +295,11 @@ export default function Login() {
                 required
                 disabled={isLoading}
                 autoComplete="current-password"
-                className="w-full h-14 pl-11 pr-12 rounded-2xl text-white text-sm outline-none transition-all duration-200 disabled:opacity-60"
+                className="w-full h-14 pl-11 pr-12 rounded-2xl text-sm outline-none transition-all duration-200 disabled:opacity-60 placeholder:text-[#0A1F3F]/50"
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  backgroundColor: password ? 'rgba(255,255,255,0.08)' : '#ffffff',
                   border: '1px solid rgba(255,255,255,0.1)',
+                  color: password ? '#ffffff' : '#0A1F3F',
                 }}
                 onFocus={(e) => (e.currentTarget.style.border = '1px solid rgba(201,168,76,0.6)')}
                 onBlur={(e) => (e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)')}
@@ -273,12 +308,39 @@ export default function Login() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold transition-opacity hover:opacity-80"
-                style={{ color: 'rgba(255,255,255,0.4)' }}
+                style={{ color: password ? 'rgba(255,255,255,0.4)' : 'rgba(10,31,63,0.45)' }}
                 tabIndex={-1}
               >
                 {showPassword ? 'OCULTAR' : 'VER'}
               </button>
             </div>
+
+            {/* Lembrar senha */}
+            <label className="flex items-center gap-2.5 px-1 cursor-pointer select-none">
+              <div
+                onClick={() => setRememberMe((v) => !v)}
+                className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                style={{
+                  backgroundColor: rememberMe ? '#C9A84C' : 'rgba(255,255,255,0.08)',
+                  border: rememberMe ? '1.5px solid #C9A84C' : '1.5px solid rgba(255,255,255,0.2)',
+                }}
+              >
+                {rememberMe && (
+                  <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+                    <path d="M1 4L4 7L10 1" stroke="#0A1F3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                Lembrar senha
+              </span>
+            </label>
 
             {/* Botão entrar */}
             <button

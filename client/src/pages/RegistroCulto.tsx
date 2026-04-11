@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { UserMenu } from '@/components/UserMenu';
+import { useHeader } from '@/contexts/HeaderContext';
 import { cultosAPI, type Campus, type Ministerio, type TipoEvento, type Ministro, type RegistroCulto } from '@/lib/api';
 import { BookOpen, CalendarDays, Check, ChevronDown, CloudOff, Download, Loader2, MapPin, MessageSquare, Minus, Plus, Users, Wifi, WifiOff, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -244,6 +244,7 @@ const FORM_INICIAL: Omit<RegistroCulto, 'id' | 'ministros' | 'campus'> = {
 const RegistroCulto = () => {
   const [, setLocation] = useLocation();
   const params = useParams();
+  useHeader({ backTo: '/home', backLabel: 'Início', subtitle: 'Registro de Cultos' });
   const isEditing = Boolean(params.id);
 
   const [form, setForm] = useState(FORM_INICIAL);
@@ -539,21 +540,6 @@ const RegistroCulto = () => {
 
     return (
       <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
-        <header style={{ backgroundColor: C.navy, borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px' }}>
-          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div>
-              <img
-                src="https://images.squarespace-cdn.com/content/v1/5bc9186e34c4e27773d92870/1546175613378-UHI78Z3KGSEOFFJEAP0B/logo-site.png"
-                alt="IECG"
-                className="h-7 w-auto"
-                style={{ filter: 'brightness(0) invert(1)' }}
-              />
-              <p className="text-xs" style={{ color: C.sky }}>Registro de Cultos</p>
-            </div>
-            <UserMenu showBackButton backTo="/home" backLabel="← Início" />
-          </div>
-        </header>
-
         <div className="flex-1 w-full max-w-2xl mx-auto px-4 pt-8 pb-10">
           {/* Ícone de sucesso */}
           <div className="flex flex-col items-center mb-8 animate-in fade-in zoom-in-50 duration-500">
@@ -647,22 +633,6 @@ const RegistroCulto = () => {
 
   return (
     <div className="min-h-screen pb-28" style={{ backgroundColor: C.surface }}>
-      {/* Header */}
-      <header style={{ backgroundColor: C.navy, borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px' }}>
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <img
-                src="https://images.squarespace-cdn.com/content/v1/5bc9186e34c4e27773d92870/1546175613378-UHI78Z3KGSEOFFJEAP0B/logo-site.png"
-                alt="IECG"
-                className="h-7 w-auto"
-                style={{ filter: 'brightness(0) invert(1)' }}
-              />
-            <p className="text-xs" style={{ color: C.sky }}>Registro de Cultos</p>
-          </div>
-          <UserMenu showBackButton backTo="/home" backLabel="← Início" />
-        </div>
-      </header>
-
       {/* ── Barra offline colapsável ── */}
       <div style={{
         backgroundColor: isOnline ? '#EBF2FB' : '#FEF3C7',

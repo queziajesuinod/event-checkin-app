@@ -7,7 +7,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronLeft, LogOut, User } from "lucide-react";
+import { useProfileSheet } from "@/contexts/ProfileSheetContext";
+import { ChevronLeft, LogOut, UserCircle } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface UserMenuProps {
@@ -23,6 +24,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const { openProfile } = useProfileSheet();
 
   const handleLogout = () => {
     logout();
@@ -69,6 +71,11 @@ export const UserMenu: React.FC<UserMenuProps> = ({
               <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
             </div>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={openProfile}>
+            <UserCircle className="mr-2 h-4 w-4" />
+            <span>Meu Perfil</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleLogout}

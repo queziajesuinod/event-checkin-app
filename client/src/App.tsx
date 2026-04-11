@@ -1,5 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import AppHeader from "./components/AppHeader";
+import InstallPWA from "./components/InstallPWA";
+import ProfileSheet from "./components/ProfileSheet";
+import { HeaderProvider } from "./contexts/HeaderContext";
+import { ProfileSheetProvider } from "./contexts/ProfileSheetContext";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -9,6 +14,7 @@ import Login from "./pages/Login";
 import Events from "./pages/Events";
 import CheckIn from "./pages/CheckIn";
 import Home from "./pages/Home";
+import Profile from "./pages/Profile";
 import RegistroCulto from "./pages/RegistroCulto";
 import VoluntariadoPublico from "./pages/VoluntariadoPublico";
 
@@ -33,6 +39,7 @@ function Router() {
       <Route path={"/login"} component={Login} />
       <Route path={"/events"} component={() => <ProtectedRoute component={Events} />} />
       <Route path={"/home"} component={() => <ProtectedRoute component={Home} />} />
+      <Route path={"/profile"} component={() => <ProtectedRoute component={Profile} />} />
       <Route path={"/checkin/:eventId"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/cultos"} component={() => <ProtectedRoute component={RegistroCulto} />} />
       <Route path={"/cultos/:id"} component={() => <ProtectedRoute component={RegistroCulto} />} />
@@ -44,30 +51,28 @@ function Router() {
       <Route path={"/:eventId/checkin"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/"} component={Login} />
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <ThemeProvider
-          defaultTheme="light"
-          // switchable
-        >
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </ThemeProvider>
+        <ProfileSheetProvider>
+          <HeaderProvider>
+            <ThemeProvider defaultTheme="light">
+              <TooltipProvider>
+                <Toaster />
+                <AppHeader />
+                <Router />
+                <ProfileSheet />
+                <InstallPWA />
+              </TooltipProvider>
+            </ThemeProvider>
+          </HeaderProvider>
+        </ProfileSheetProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

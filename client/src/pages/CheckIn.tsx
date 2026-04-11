@@ -1,5 +1,5 @@
 import { Input } from '@/components/ui/input';
-import { UserMenu } from '@/components/UserMenu';
+import { useHeader } from '@/contexts/HeaderContext';
 import api, { checkInAPI, eventsAPI } from '@/lib/api';
 import axios from 'axios';
 import {
@@ -466,6 +466,11 @@ export default function CheckIn() {
   const [error, setError] = useState('');
   const [eventTitle, setEventTitle] = useState('Evento');
   const [eventLocation, setEventLocation] = useState('');
+
+  const { setConfig } = useHeader({ backTo: '/events', backLabel: 'Eventos' });
+  useEffect(() => {
+    setConfig({ backTo: '/events', backLabel: 'Eventos', subtitle: eventTitle || undefined });
+  }, [eventTitle]);
   const [kpis, setKpis] = useState<CheckInKpis>({ done: 0, pending: 0 });
   const [isLoadingKpis, setIsLoadingKpis] = useState(false);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
@@ -1464,40 +1469,6 @@ export default function CheckIn() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F0F2F5' }}>
-
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-20" style={{ backgroundColor: '#0A1F3F', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px' }}>
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => setLocation('/events')}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 transition-all duration-200 active:scale-95"
-              style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: '#fff' }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Eventos</span>
-            </button>
-            <div className="min-w-0">
-              <img
-                src="https://images.squarespace-cdn.com/content/v1/5bc9186e34c4e27773d92870/1546175613378-UHI78Z3KGSEOFFJEAP0B/logo-site.png"
-                alt="IECG"
-                className="h-6 w-auto"
-                style={{ filter: 'brightness(0) invert(1)' }}
-              />
-              {eventTitle && (
-                <p className="text-xs truncate" style={{ color: '#4A90D9' }}>{eventTitle}</p>
-              )}
-              {eventLocation && (
-                <p className="text-xs flex items-center gap-1 truncate" style={{ color: '#4A90D9' }}>
-                  <MapPin className="w-3 h-3 flex-shrink-0" />
-                  {eventLocation}
-                </p>
-              )}
-            </div>
-          </div>
-          <UserMenu showBackButton={false} />
-        </div>
-      </header>
 
       {/* ── Barra offline compacta ── */}
       <div
