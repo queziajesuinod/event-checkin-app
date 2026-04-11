@@ -44,9 +44,10 @@ export default function AppHeader() {
         backgroundColor: '#0A1F3F',
         borderBottomLeftRadius: '20px',
         borderBottomRightRadius: '20px',
+        paddingTop: 'max(12px, env(safe-area-inset-top))',
       }}
     >
-      <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div className="max-w-2xl mx-auto px-4 pb-3 flex items-center gap-3">
 
         {/* ── Botão voltar (opcional) ── */}
         {config.backTo && (
