@@ -245,7 +245,13 @@ export default function Profile({ onClose }: { onClose?: () => void }) {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
 
       {/* ── Header ── */}
-      <header className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: C.navy }}>
+      <header
+        className="px-4 pb-3 flex items-center gap-3"
+        style={{
+          backgroundColor: C.navy,
+          paddingTop: 'max(12px, env(safe-area-inset-top))',
+        }}
+      >
         <button
           onClick={() => onClose ? onClose() : setLocation('/home')}
           className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95"
