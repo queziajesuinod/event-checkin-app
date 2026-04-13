@@ -43,6 +43,10 @@ export default function Login() {
 
   useEffect(() => {
     const saved = localStorage.getItem('savedCredentials');
+    const wasExplicitLogout = sessionStorage.getItem('explicitLogout') === '1';
+    if (wasExplicitLogout) {
+      sessionStorage.removeItem('explicitLogout');
+    }
     if (saved) {
       try {
         const { email: savedEmail, password: savedPassword } = JSON.parse(saved);
@@ -50,8 +54,8 @@ export default function Login() {
         if (savedPassword) setPassword(savedPassword);
         setRememberMe(true);
 
-        // auto-login silencioso
-        if (savedEmail && savedPassword) {
+        // auto-login silencioso — pula se foi um logout explícito
+        if (savedEmail && savedPassword && !wasExplicitLogout) {
           setIsLoading(true);
           login(savedEmail, savedPassword)
             .then(() => setLocation('/home'))
