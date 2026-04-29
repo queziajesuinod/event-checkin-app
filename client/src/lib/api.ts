@@ -101,6 +101,39 @@ export interface AreaVoluntariado {
   nome: string;
 }
 
+export interface VoluntariadoEntrada {
+  areaVoluntariadoId: string;
+  campusId?: string;
+  ministerioId?: string;
+  dataInicio: string;
+  observacao?: string;
+}
+
+export interface VoluntariadoInput {
+  memberId: string;
+  areaVoluntariadoId: string;
+  dataInicio: string;
+  campusId?: string;
+  ministerioId?: string;
+  observacao?: string;
+}
+
+export interface Voluntariado {
+  id: string;
+  memberId: string;
+  areaVoluntariadoId: string;
+  campusId?: string;
+  ministerioId?: string;
+  dataInicio: string;
+  dataFim?: string;
+  status: string;
+  observacao?: string;
+  membro?: { id: string; nome: string; email?: string };
+  area?: AreaVoluntariado;
+  campus?: { id: string; nome: string };
+  ministerio?: { id: string; nome: string };
+}
+
 export interface VoluntariadoPublicPayload {
   fullName: string;
   preferredName?: string;
@@ -108,9 +141,7 @@ export interface VoluntariadoPublicPayload {
   cpf: string;
   phone: string;
   birthDate: string;
-  areaVoluntariadoIds: string[];
-  dataInicio: string;
-  observacao?: string;
+  voluntariados: VoluntariadoEntrada[];
 }
 
 const api = axios.create({
@@ -163,6 +194,11 @@ export const eventsAPI = {
 
 export const voluntariadoPublicAPI = {
   listarAreas: () => publicApi.get<AreaVoluntariado[]>("/api/public/voluntariado/areas"),
+  listarCampi: () => publicApi.get<Campus[]>("/api/public/voluntariado/campus"),
+  listarMinisteriosPorCampus: (campusId: string) =>
+    publicApi.get<{ id: string; nome: string }[]>(
+      `/api/public/voluntariado/campus/${campusId}/ministerios`,
+    ),
   cadastrar: (payload: VoluntariadoPublicPayload) =>
     publicApi.post("/api/public/voluntariado", payload),
 };
