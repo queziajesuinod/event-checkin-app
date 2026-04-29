@@ -45,7 +45,7 @@ function formatPhone(value: string): string {
 
 function getErrorMessage(error: unknown): string {
   if (!axios.isAxiosError(error)) {
-    return "Nao foi possivel concluir o cadastro. Tente novamente.";
+    return "Não foi possível concluir o cadastro. Tente novamente.";
   }
   const data = error.response?.data;
   if (typeof data === "string" && data.trim()) return data;
@@ -54,7 +54,7 @@ function getErrorMessage(error: unknown): string {
     if (typeof d.message === "string" && d.message.trim()) return d.message;
     if (typeof d.error === "string" && d.error.trim()) return d.error;
   }
-  return "Nao foi possivel concluir o cadastro. Verifique os dados e tente novamente.";
+  return "Não foi possível concluir o cadastro. Verifique os dados e tente novamente.";
 }
 
 interface EntradaForm {
@@ -129,7 +129,7 @@ export default function VoluntariadoPublico() {
             : [],
         );
       } else {
-        setError("Nao foi possivel carregar as areas de voluntariado.");
+        setError("Não foi possível carregar as áreas de voluntariado.");
       }
 
       if (campiRes.status === "fulfilled") {
@@ -207,7 +207,7 @@ export default function VoluntariadoPublico() {
     event.preventDefault();
 
     if (formData.entradas.some((e) => !e.areaVoluntariadoId || !e.dataInicio)) {
-      setError("Cada entrada deve ter uma area e data de inicio.");
+      setError("Cada entrada deve ter uma área e data de início.");
       return;
     }
 
@@ -264,10 +264,10 @@ export default function VoluntariadoPublico() {
         >
           <div className="mb-6 border-b pb-4" style={{ borderColor: "#E5E7EB" }}>
             <h1 className="text-2xl font-extrabold" style={{ color: C.navy }}>
-              Cadastro de Voluntarios
+              Cadastro de Voluntários
             </h1>
             <p className="mt-1 text-sm" style={{ color: "#6B7280" }}>
-              Preencha o formulario para iniciar seu cadastro de voluntariado.
+              Preencha o formulário para iniciar seu cadastro de voluntariado.
             </p>
           </div>
 
@@ -360,10 +360,10 @@ export default function VoluntariadoPublico() {
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold" style={{ color: C.navy }}>
-                    Areas de voluntariado
+                    Áreas de voluntariado
                   </p>
                   <p className="text-xs" style={{ color: "#6B7280" }}>
-                    Adicione uma entrada para cada area, campus ou ministerio desejado.
+                    Adicione uma entrada para cada área, campus ou ministério desejado.
                   </p>
                 </div>
                 {formData.entradas.length > 1 && (
@@ -382,7 +382,7 @@ export default function VoluntariadoPublico() {
                   style={{ borderColor: "#D1D5DB", color: "#6B7280" }}
                 >
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Carregando opcoes...
+                  Carregando opções...
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -417,7 +417,7 @@ export default function VoluntariadoPublico() {
 
                       <div className="grid gap-3 sm:grid-cols-2">
                         <label className="text-xs font-semibold" style={{ color: C.navy }}>
-                          Area *
+                          Área *
                           <select
                             value={entrada.areaVoluntariadoId}
                             onChange={(e) =>
@@ -432,7 +432,7 @@ export default function VoluntariadoPublico() {
                               backgroundColor: C.white,
                             }}
                           >
-                            <option value="">Selecione a area...</option>
+                            <option value="">Selecione a área...</option>
                             {areas.map((a) => (
                               <option key={a.id} value={a.id}>
                                 {a.nome}
@@ -442,7 +442,7 @@ export default function VoluntariadoPublico() {
                         </label>
 
                         <label className="text-xs font-semibold" style={{ color: C.navy }}>
-                          Data de inicio *
+                          Data de início *
                           <input
                             type="date"
                             value={entrada.dataInicio}
@@ -481,7 +481,7 @@ export default function VoluntariadoPublico() {
                         </label>
 
                         <label className="text-xs font-semibold" style={{ color: C.navy }}>
-                          Ministerio
+                          Ministério
                           {entrada.campusId && loadingMinisterios[entrada.campusId] ? (
                             <div
                               className="mt-1 flex h-10 items-center gap-2 rounded-lg border px-2 text-xs"
@@ -506,7 +506,7 @@ export default function VoluntariadoPublico() {
                             >
                               <option value="">
                                 {entrada.campusId
-                                  ? "Selecione o ministerio..."
+                                  ? "Selecione o ministério..."
                                   : "Selecione o campus primeiro"}
                               </option>
                               {(ministeriosPorCampus[entrada.campusId] ?? []).map((m) => (
@@ -524,7 +524,7 @@ export default function VoluntariadoPublico() {
                           }`}
                           style={{ color: C.navy }}
                         >
-                          Observacao
+                          Observação
                           <input
                             type="text"
                             value={entrada.observacao}
@@ -549,7 +549,7 @@ export default function VoluntariadoPublico() {
                     style={{ backgroundColor: "rgba(10,31,63,0.07)", color: C.navy }}
                   >
                     <Plus className="h-4 w-4" />
-                    Adicionar outra area
+                    Adicionar outra área
                   </button>
                 </div>
               )}
@@ -575,7 +575,7 @@ export default function VoluntariadoPublico() {
             </button>
 
             <p className="text-center text-xs" style={{ color: "#6B7280" }}>
-              Ao concluir, voce sera notificado e redirecionado para o login.
+              Ao concluir, você será notificado e redirecionado para o login.
             </p>
           </form>
         </div>
