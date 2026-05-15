@@ -321,8 +321,13 @@ export default function Login() {
 
             {/* Lembrar senha */}
             <label className="flex items-center gap-2.5 px-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
               <div
-                onClick={() => setRememberMe((v) => !v)}
                 className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
                 style={{
                   backgroundColor: rememberMe ? '#C9A84C' : 'rgba(255,255,255,0.08)',
@@ -335,12 +340,6 @@ export default function Login() {
                   </svg>
                 )}
               </div>
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
               <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
                 Lembrar senha
               </span>
