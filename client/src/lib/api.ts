@@ -308,6 +308,220 @@ const cultosAPI = {
   listarCampi: () => api.get('/start/campus'),
 };
 
+// ── Interfaces para Célula ──────────────────────────────────────────────────
+
+export interface MinhacelulInfo {
+  id: string;
+  nome: string;
+  diaSemana?: string;
+  horario?: string;
+  lider?: { id: string; nome: string };
+}
+
+export interface CelulaMembro {
+  id: string;
+  papel: string;
+  dataEntrada: string;
+  membro: {
+    id: string;
+    fullName: string;
+    preferredName?: string;
+    phone?: string;
+    whatsapp?: string;
+    photoUrl?: string;
+    status?: string;
+  };
+}
+
+export interface CelulaMemboCandidato {
+  id: string;
+  fullName: string;
+  preferredName?: string;
+  phone?: string;
+  photoUrl?: string;
+  celulaAtual?: { id: string; celula: string; lider: string } | null;
+}
+
+export interface CelulaReuniaoItem {
+  id: string;
+  data: string;
+  status: string;
+  origem: string;
+  observacoes?: string;
+}
+
+export interface CelulaPresencaItem {
+  tipo: "membro" | "avulso";
+  membroId?: string;
+  preCadastroId?: string;
+  nome: string;
+  fotoUrl?: string;
+  papel?: string;
+  tipoPessoa?: string;
+  telefone?: string;
+  presente: boolean | null;
+  presencaId?: string;
+  totalPresencas?: number;
+  promotable?: boolean;
+}
+
+export interface CelulaRelatorio {
+  lider: string;
+  discipulos: number;
+  visitantes: number;
+  total: number;
+  paraPromover: Array<{ id: string; nome: string; tipo: string; totalPresencas: number }>;
+}
+
+export interface CelulaPresencaData {
+  reuniao: { id: string; data: string; status: string; celulaId: string };
+  membros: CelulaPresencaItem[];
+  avulsos: CelulaPresencaItem[];
+}
+
+export const celulaAPI = {
+  minhacelula: () =>
+    api.get<MinhacelulInfo>("/api/admin/celulas-presenca/minha-celula"),
+
+  listarMembros: (celulaId: string) =>
+    api.get<CelulaMembro[]>(`/api/admin/celulas-presenca/${celulaId}/membros`),
+
+  buscarCandidatos: (celulaId: string, q: string) =>
+    api.get<CelulaMemboCandidato[]>(
+      `/api/admin/celulas-presenca/${celulaId}/membros-candidatos`,
+      { params: { q } }
+    ),
+
+  vincularMembro: (
+    celulaId: string,
+    payload: { membroId: string; papel: string; dataEntrada: string }
+  ) =>
+    api.post<{
+      id: string;
+      celulaId: string;
+      membroId: string;
+      papel: string;
+      dataEntrada: string;
+      aviso?: { celulaAnteriorId: string; celulaAnteriorNome: string; liderAnterior: string } | null;
+    }>(`/api/admin/celulas-presenca/${celulaId}/membros`, payload),
+
+  cadastrarEVincular: (
+    celulaId: string,
+    payload: {
+      fullName: string;
+      preferredName?: string;
+      phone?: string;
+      whatsapp?: string;
+      email?: string;
+      gender?: string;
+      birthDate?: string;
+      papel: string;
+    }
+  ) =>
+    api.post<{ membro: { id: string; fullName: string }; vinculo: { id: string } }>(
+      `/api/admin/celulas-presenca/${celulaId}/membros/cadastrar`,
+      payload
+    ),
+
+  desvincularMembro: (celulaId: string, membroId: string) =>
+    api.delete<{ mensagem: string }>(
+      `/api/admin/celulas-presenca/${celulaId}/membros/${membroId}`
+    ),
+
+  editarMembro: (
+    celulaId: string,
+    membroId: string,
+    payload: { fullName: string; preferredName?: string; phone?: string; whatsapp?: string; papel?: string }
+  ) =>
+    api.patch<{ mensagem: string; membro: { id: string; fullName: string; preferredName?: string; phone?: string; whatsapp?: string }; papel?: string }>(
+      `/api/admin/celulas-presenca/${celulaId}/membros/${membroId}`,
+      payload
+    ),
+
+  statsMembro: (celulaId: string, membroId: string) =>
+    api.get(`/api/admin/celulas-presenca/${celulaId}/membros/${membroId}/stats`),
+
+  listarReunioes: (
+    celulaId: string,
+    params?: { status?: string; limit?: number; offset?: number }
+  ) =>
+    api.get<{ total: number; reunioes: CelulaReuniaoItem[] }>(
+      `/api/admin/celulas-presenca/${celulaId}/reunioes`,
+      { params }
+    ),
+
+  criarReuniao: (celulaId: string, payload: { data: string; observacoes?: string }) =>
+    api.post<CelulaReuniaoItem>(
+      `/api/admin/celulas-presenca/${celulaId}/reunioes`,
+      payload
+    ),
+
+  sugerirReunioes: (celulaId: string, semanas?: number) =>
+    api.get<Array<{ data: string; diaSemana: string; horario: string; jaExiste: boolean }>>(
+      `/api/admin/celulas-presenca/${celulaId}/reunioes/sugestoes`,
+      { params: { semanas } }
+    ),
+
+  confirmarSugestoes: (celulaId: string, datas: string[]) =>
+    api.post<{ mensagem: string; criadas: number }>(
+      `/api/admin/celulas-presenca/${celulaId}/reunioes/confirmar`,
+      { datas }
+    ),
+
+  excluirReuniao: (reuniaoId: string) =>
+    api.delete<{
+      mensagem: string;
+      presencasRemovidas: number;
+      pontosRemovidos: number;
+      foiEncerrada: boolean;
+    }>(`/api/admin/celulas-presenca/reunioes/${reuniaoId}`),
+
+  cancelarReuniao: (reuniaoId: string, motivo?: string) =>
+    api.patch(`/api/admin/celulas-presenca/reunioes/${reuniaoId}/cancelar`, { motivo }),
+
+  reabrirReuniao: (reuniaoId: string) =>
+    api.patch<CelulaReuniaoItem>(
+      `/api/admin/celulas-presenca/reunioes/${reuniaoId}/reabrir`
+    ),
+
+  editarReuniao: (reuniaoId: string, payload: { data?: string }) =>
+    api.patch<CelulaReuniaoItem>(
+      `/api/admin/celulas-presenca/reunioes/${reuniaoId}`,
+      payload
+    ),
+
+  obterPresenca: (reuniaoId: string) =>
+    api.get<CelulaPresencaData>(
+      `/api/admin/celulas-presenca/reunioes/${reuniaoId}/presenca`
+    ),
+
+  salvarPresencas: (
+    reuniaoId: string,
+    presencas: Array<{ membroId?: string; preCadastroId?: string; presente: boolean }>
+  ) =>
+    api.post<{ mensagem: string; relatorio: CelulaRelatorio }>(
+      `/api/admin/celulas-presenca/reunioes/${reuniaoId}/presenca`,
+      { presencas }
+    ),
+
+  adicionarAvulso: (
+    reuniaoId: string,
+    payload: { nome: string; telefone?: string; whatsapp?: string; tipo: string }
+  ) =>
+    api.post(`/api/admin/celulas-presenca/reunioes/${reuniaoId}/presenca/avulso`, payload),
+
+  promoverPreCadastro: (celulaId: string, preCadastroId: string) =>
+    api.post<{ membro: { id: string; fullName: string }; mensagem: string }>(
+      `/api/admin/celulas-presenca/${celulaId}/pre-cadastros/${preCadastroId}/promover`
+    ),
+
+  atualizarTipoAvulso: (celulaId: string, preCadastroId: string, tipo: string) =>
+    api.patch<{ mensagem: string; tipo: string }>(
+      `/api/admin/celulas-presenca/${celulaId}/pre-cadastros/${preCadastroId}`,
+      { tipo }
+    ),
+};
+
 export { checkInAPI, cultosAPI };
 
 export default api;

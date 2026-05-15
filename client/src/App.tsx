@@ -17,6 +17,8 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import RegistroCulto from "./pages/RegistroCulto";
 import VoluntariadoPublico from "./pages/VoluntariadoPublico";
+import CelulaLider from "./pages/CelulaLider";
+import CelulaPresenca from "./pages/CelulaPresenca";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -47,6 +49,8 @@ function Router() {
       <Route path={"/voluntariado/"} component={VoluntariadoPublico} />
       <Route path={"/voluntariado/cadastro"} component={VoluntariadoPublico} />
       <Route path={"/cadastro-voluntariado"} component={VoluntariadoPublico} />
+      <Route path={"/celula"} component={() => <ProtectedRoute component={CelulaLider} />} />
+      <Route path={"/celula/presenca/:reuniaoId"} component={() => <ProtectedRoute component={CelulaPresenca} />} />
       <Route path={"/:eventId"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/:eventId/checkin"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/"} component={Login} />

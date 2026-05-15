@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useHeader } from "@/contexts/HeaderContext";
-import { Calendar, Church, ChevronRight } from "lucide-react";
+import { Calendar, Church, ChevronRight, Users } from "lucide-react";
 import { useLocation } from "wouter";
 
 const C = {
@@ -85,9 +85,11 @@ export default function Home() {
   const isAdmin = perfis.includes("Administrador");
   const showEventos = isAdmin || perfis.includes("EVENTOS");
   const showCultos = isAdmin || perfis.includes("BACKSTAGE");
+  const showCelula =
+    isAdmin || perfis.includes("LIDER_CELULA") || perfis.includes("CELULA");
 
   const firstName = user?.name?.split(" ")[0] ?? "Usuário";
-  const hasAny = showEventos || showCultos;
+  const hasAny = showEventos || showCultos || showCelula;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
@@ -129,6 +131,18 @@ export default function Home() {
                   sublabel="Registros e presença"
                   gradient={["#C9A84C", "#E8C46A"]}
                   onClick={() => setLocation("/cultos")}
+                />
+              </div>
+            )}
+
+            {showCelula && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '300ms' }}>
+                <Tile
+                  icon={<Users className="w-6 h-6 text-white" />}
+                  label="Minha Célula"
+                  sublabel="Membros e presença"
+                  gradient={["#16A34A", "#22C55E"]}
+                  onClick={() => setLocation("/celula")}
                 />
               </div>
             )}
