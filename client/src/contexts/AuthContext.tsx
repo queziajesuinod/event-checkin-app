@@ -8,6 +8,7 @@ interface User {
   name: string;
   accessToken: string;
   perfis: string[];
+  permissoes: string[];
 }
 
 interface JwtPayload {
@@ -89,6 +90,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (decodedPerfis.length > 0) {
         parsedUser.perfis = decodedPerfis;
       }
+      if (!Array.isArray(parsedUser.permissoes)) {
+        parsedUser.permissoes = [];
+      }
       if (decodedNome) {
         parsedUser.name = decodedNome;
       } else if (!parsedUser.name) {
@@ -151,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: decodedNome || data.nome || data.name || email,
         accessToken: data.accessToken,
         perfis: decodeJwtPerfis(payload),
+        permissoes: Array.isArray(data.permissoes) ? data.permissoes : [],
       };
 
       localStorage.setItem('authToken', data.accessToken);

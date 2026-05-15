@@ -81,12 +81,16 @@ export default function Home() {
 
   useHeader({});
 
-  const perfis = user?.perfis ?? [];
-  const isAdmin = perfis.includes("Administrador");
-  const showEventos = isAdmin || perfis.includes("EVENTOS");
-  const showCultos = isAdmin || perfis.includes("BACKSTAGE");
+  const perfis = (user?.perfis ?? []).map((p) => p.toLowerCase());
+  const permissoes = (user?.permissoes ?? []).map((p) => p.toUpperCase());
+  const isAdmin = perfis.some((p) => p === "administrador" || p === "admin");
+  const showEventos = isAdmin || perfis.includes("eventos");
+  const showCultos = isAdmin || perfis.includes("backstage");
   const showCelula =
-    isAdmin || perfis.includes("LIDER_CELULA") || perfis.includes("CELULA");
+    isAdmin ||
+    perfis.includes("lider_celula") ||
+    perfis.includes("celula") ||
+    permissoes.includes("LIDER_CELULA_PRESENCA");
 
   const firstName = user?.name?.split(" ")[0] ?? "Usuário";
   const hasAny = showEventos || showCultos || showCelula;

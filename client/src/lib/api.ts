@@ -11,6 +11,7 @@ export interface LoginResponse {
   id?: string;
   nome?: string;
   name?: string;
+  permissoes?: string[];
 }
 
 export interface EventSummary {
