@@ -12,6 +12,13 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Events from "./pages/Events";
+import EventList from "./pages/EventList";
+import EventDetails from "./pages/EventDetails";
+import RegistrationConfirmation from "./pages/RegistrationConfirmation";
+import RegistrationView from "./pages/RegistrationView";
+import PixConfirmation from "./pages/PixConfirmation";
+import RegistrationSuccess from "./pages/RegistrationSuccess";
+import Ticket from "./pages/Ticket";
 import CheckIn from "./pages/CheckIn";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
@@ -39,6 +46,13 @@ function Router() {
   return (
     <Switch>
       <Route path={"/login"} component={Login} />
+      <Route path={"/eventos"} component={EventList} />
+      <Route path={"/eventos/:id"} component={EventDetails} />
+      <Route path={"/inscricao/:orderCode"} component={RegistrationConfirmation} />
+      <Route path={"/inscricao/:orderCode/visualizacao"} component={RegistrationView} />
+      <Route path={"/pix-confirmacao"} component={PixConfirmation} />
+      <Route path={"/inscricao/:orderCode/sucesso"} component={RegistrationSuccess} />
+      <Route path={"/ticket/:orderCode"} component={Ticket} />
       <Route path={"/events"} component={() => <ProtectedRoute component={Events} />} />
       <Route path={"/home"} component={() => <ProtectedRoute component={Home} />} />
       <Route path={"/profile"} component={() => <ProtectedRoute component={Profile} />} />
