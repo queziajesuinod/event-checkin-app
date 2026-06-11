@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useHeader } from "@/contexts/HeaderContext";
-import { Calendar, Church, ChevronRight, Users } from "lucide-react";
+import { Calendar, Church, ChevronRight, Users, MessageCircleQuestion } from "lucide-react";
 import { useLocation } from "wouter";
 
 const C = {
@@ -91,9 +91,13 @@ export default function Home() {
     perfis.includes("lider_celula") ||
     perfis.includes("celula") ||
     permissoes.includes("LIDER_CELULA_PRESENCA");
+  const showPerguntas =
+    isAdmin ||
+    permissoes.includes("PERGUNTAS_AO_VIVO_GERENCIAR") ||
+    permissoes.includes("PERGUNTAS_AO_VIVO_MODERAR");
 
   const firstName = user?.name?.split(" ")[0] ?? "Usuário";
-  const hasAny = showEventos || showCultos || showCelula;
+  const hasAny = showEventos || showCultos || showCelula || showPerguntas;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
@@ -147,6 +151,18 @@ export default function Home() {
                   sublabel="Membros e presença"
                   gradient={["#16A34A", "#22C55E"]}
                   onClick={() => setLocation("/celula")}
+                />
+              </div>
+            )}
+
+            {showPerguntas && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '400ms' }}>
+                <Tile
+                  icon={<MessageCircleQuestion className="w-6 h-6 text-white" />}
+                  label="Perguntas ao Vivo"
+                  sublabel="Moderar perguntas"
+                  gradient={["#4F46E5", "#7C3AED"]}
+                  onClick={() => setLocation("/perguntas")}
                 />
               </div>
             )}
