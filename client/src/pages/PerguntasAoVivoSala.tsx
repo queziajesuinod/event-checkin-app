@@ -26,6 +26,7 @@ export default function PerguntasAoVivoSala() {
   const [liveId, setLiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
+  const [showAnswered, setShowAnswered] = useState(false);
   const busy = useRef(false);
 
   useHeader({ title: sala?.title ?? "Sala", backTo: "/perguntas" });
@@ -127,33 +128,33 @@ export default function PerguntasAoVivoSala() {
           <p className="text-xs text-slate-400">{q.authorName || "Anônimo"}</p>
         </div>
 
-        <div className="flex items-center gap-0.5 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {isLive ? (
-            <Button size="icon" variant="ghost" className="text-purple-600" title="Tirar do ao vivo"
+            <Button size="icon" variant="ghost" className="h-11 w-11 text-purple-600 hover:bg-purple-50" title="Tirar do ao vivo"
               onClick={() => moderar(q.id, { isLive: false })}
             >
               <Square className="w-5 h-5" />
             </Button>
           ) : (
-            <Button size="icon" variant="ghost" className="text-indigo-600" title="Responder agora (ao vivo)"
+            <Button size="icon" variant="ghost" className="h-11 w-11 text-indigo-600 hover:bg-indigo-50" title="Responder agora (ao vivo)"
               onClick={() => moderar(q.id, { isLive: true })}
             >
               <Tv className="w-5 h-5" />
             </Button>
           )}
-          <Button size="icon" variant="ghost" className={q.answered ? "text-amber-500" : "text-emerald-600"}
+          <Button size="icon" variant="ghost" className={`h-11 w-11 ${q.answered ? "text-amber-500 hover:bg-amber-50" : "text-emerald-600 hover:bg-emerald-50"}`}
             title={q.answered ? "Reabrir" : "Marcar respondida"}
             onClick={() => moderar(q.id, { answered: !q.answered })}
           >
             {q.answered ? <RotateCcw className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
           </Button>
-          <Button size="icon" variant="ghost" className="text-slate-500"
+          <Button size="icon" variant="ghost" className="h-11 w-11 text-slate-500 hover:bg-slate-100"
             title={q.status === "archived" ? "Restaurar" : "Arquivar"}
             onClick={() => moderar(q.id, { status: q.status === "archived" ? "active" : "archived" })}
           >
             {q.status === "archived" ? <ArchiveRestore className="w-5 h-5" /> : <Archive className="w-5 h-5" />}
           </Button>
-          <Button size="icon" variant="ghost" className="text-red-500" title="Excluir"
+          <Button size="icon" variant="ghost" className="h-11 w-11 text-red-500 hover:bg-red-50" title="Excluir"
             onClick={() => excluir(q.id)}
           >
             <Trash2 className="w-5 h-5" />
@@ -234,14 +235,17 @@ export default function PerguntasAoVivoSala() {
 
             {grupos.respondidas.length > 0 && (
               <>
-                <SectionTitle>
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <span className="font-bold text-emerald-700">Respondidas</span>
-                  <Badge variant="secondary">{grupos.respondidas.length}</Badge>
-                </SectionTitle>
-                <div className="space-y-2">
-                  {grupos.respondidas.map((q) => <Card key={q.id} q={q} variant="answered" />)}
-                </div>
+                <Button variant="ghost" size="sm" className="mt-5 gap-1 text-emerald-700"
+                  onClick={() => setShowAnswered((v) => !v)}
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Respondidas ({grupos.respondidas.length})
+                  {showAnswered ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
+                {showAnswered && (
+                  <div className="space-y-2 mt-2">
+                    {grupos.respondidas.map((q) => <Card key={q.id} q={q} variant="answered" />)}
+                  </div>
+                )}
               </>
             )}
 
