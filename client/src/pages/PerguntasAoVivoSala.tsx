@@ -115,6 +115,8 @@ export default function PerguntasAoVivoSala() {
     }
   };
 
+  const salaFechada = sala?.status === "closed";
+
   const Card = ({ q, rank, variant }: { q: LiveQaQuestion; rank?: number; variant?: string }) => {
     const isLive = variant === "live";
     const accent = isLive ? "border-l-purple-500" : variant === "answered" ? "border-l-emerald-500" : "border-l-indigo-500";
@@ -141,6 +143,7 @@ export default function PerguntasAoVivoSala() {
         </div>
         </div>
 
+        {!salaFechada && (
         <div className="flex items-center justify-end gap-1.5 flex-shrink-0 border-t border-slate-100 pt-2 sm:border-t-0 sm:pt-0">
           {isLive ? (
             <Button size="icon" variant="ghost" className="h-11 w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 rounded-xl bg-purple-100 text-purple-700 hover:bg-purple-200" title="Tirar do ao vivo"
@@ -173,6 +176,7 @@ export default function PerguntasAoVivoSala() {
             <Trash2 className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
           </Button>
         </div>
+        )}
       </div>
     );
   };
@@ -224,6 +228,14 @@ export default function PerguntasAoVivoSala() {
                 {sala.status === "open" ? "Fechar sala" : "Reabrir sala"}
               </Button>
             )}
+          </div>
+        )}
+
+        {salaFechada && !loading && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-600">
+            <Lock className="w-4 h-4 shrink-0" />
+            Sala fechada — modo somente leitura.
+            {canManage && " Reabra a sala para moderar."}
           </div>
         )}
 
