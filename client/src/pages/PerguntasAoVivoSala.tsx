@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { toast } from "sonner";
 import {
   ThumbsUp, Tv, Square, CheckCircle2, RotateCcw, Archive, ArchiveRestore,
-  Trash2, ExternalLink, Copy, Loader2, ChevronDown, ChevronUp,
+  Trash2, ExternalLink, Copy, Loader2, ChevronDown, ChevronUp, Lock, LockOpen,
 } from "lucide-react";
 import { useHeader } from "@/contexts/HeaderContext";
 import { Button } from "@/components/ui/button";
@@ -104,14 +104,26 @@ export default function PerguntasAoVivoSala() {
     }
   };
 
+  const toggleBloqueio = async () => {
+    if (!sala) return;
+    try {
+      await liveQaAPI.updateSession(sala.id, { questionsLocked: !sala.questionsLocked });
+      carregarSala();
+      toast.success(sala.questionsLocked ? "Perguntas liberadas." : "Novas perguntas bloqueadas.");
+    } catch {
+      toast.error("Erro ao atualizar sala.");
+    }
+  };
+
   const Card = ({ q, rank, variant }: { q: LiveQaQuestion; rank?: number; variant?: string }) => {
     const isLive = variant === "live";
     const accent = isLive ? "border-l-purple-500" : variant === "answered" ? "border-l-emerald-500" : "border-l-indigo-500";
     return (
       <div
-        className={`bg-white rounded-xl border border-slate-200 border-l-4 ${accent} p-3 flex items-center gap-3 ${variant === "archived" ? "opacity-60" : ""} ${isLive ? "shadow-md ring-1 ring-purple-200" : ""}`}
+        className={`bg-white rounded-xl border border-slate-200 border-l-4 ${accent} p-3 flex flex-col sm:flex-row sm:items-center gap-3 ${variant === "archived" ? "opacity-60" : ""} ${isLive ? "shadow-md ring-1 ring-purple-200" : ""}`}
       >
-        <div className="flex flex-col items-center w-12 flex-shrink-0">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className="flex flex-col items-center w-10 flex-shrink-0">
           {typeof rank === "number" && (
             <span className={`w-6 h-6 mb-0.5 rounded-full grid place-items-center text-xs font-extrabold text-white ${MEDAL[rank] ?? "bg-slate-300"}`}>
               {rank}
@@ -124,40 +136,41 @@ export default function PerguntasAoVivoSala() {
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-slate-800 break-words font-medium">{q.text}</p>
-          <p className="text-xs text-slate-400">{q.authorName || "Anônimo"}</p>
+          <p className="text-slate-800 break-words font-medium text-sm md:text-base lg:text-lg">{q.text}</p>
+          <p className="text-xs md:text-sm text-slate-400">{q.authorName || "Anônimo"}</p>
+        </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center justify-end gap-1.5 flex-shrink-0 border-t border-slate-100 pt-2 sm:border-t-0 sm:pt-0">
           {isLive ? (
-            <Button size="icon" variant="ghost" className="h-11 w-11 text-purple-600 hover:bg-purple-50" title="Tirar do ao vivo"
+            <Button size="icon" variant="ghost" className="h-11 w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 rounded-xl bg-purple-100 text-purple-700 hover:bg-purple-200" title="Tirar do ao vivo"
               onClick={() => moderar(q.id, { isLive: false })}
             >
-              <Square className="w-5 h-5" />
+              <Square className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
             </Button>
           ) : (
-            <Button size="icon" variant="ghost" className="h-11 w-11 text-indigo-600 hover:bg-indigo-50" title="Responder agora (ao vivo)"
+            <Button size="icon" variant="ghost" className="h-11 w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 rounded-xl bg-indigo-100 text-indigo-700 hover:bg-indigo-200" title="Responder agora (ao vivo)"
               onClick={() => moderar(q.id, { isLive: true })}
             >
-              <Tv className="w-5 h-5" />
+              <Tv className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
             </Button>
           )}
-          <Button size="icon" variant="ghost" className={`h-11 w-11 ${q.answered ? "text-amber-500 hover:bg-amber-50" : "text-emerald-600 hover:bg-emerald-50"}`}
+          <Button size="icon" variant="ghost" className={`h-11 w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 rounded-xl ${q.answered ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}
             title={q.answered ? "Reabrir" : "Marcar respondida"}
             onClick={() => moderar(q.id, { answered: !q.answered })}
           >
-            {q.answered ? <RotateCcw className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+            {q.answered ? <RotateCcw className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" /> : <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />}
           </Button>
-          <Button size="icon" variant="ghost" className="h-11 w-11 text-slate-500 hover:bg-slate-100"
+          <Button size="icon" variant="ghost" className="h-11 w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"
             title={q.status === "archived" ? "Restaurar" : "Arquivar"}
             onClick={() => moderar(q.id, { status: q.status === "archived" ? "active" : "archived" })}
           >
-            {q.status === "archived" ? <ArchiveRestore className="w-5 h-5" /> : <Archive className="w-5 h-5" />}
+            {q.status === "archived" ? <ArchiveRestore className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" /> : <Archive className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />}
           </Button>
-          <Button size="icon" variant="ghost" className="h-11 w-11 text-red-500 hover:bg-red-50" title="Excluir"
+          <Button size="icon" variant="ghost" className="h-11 w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 rounded-xl bg-red-100 text-red-600 hover:bg-red-200" title="Excluir"
             onClick={() => excluir(q.id)}
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
           </Button>
         </div>
       </div>
@@ -170,7 +183,7 @@ export default function PerguntasAoVivoSala() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-10">
-      <div className="px-4 pt-4 max-w-2xl mx-auto">
+      <div className="px-4 pt-4 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto">
         {/* Barra de ações */}
         {sala && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -178,6 +191,11 @@ export default function PerguntasAoVivoSala() {
             <Badge className={sala.status === "open" ? "bg-emerald-500 hover:bg-emerald-500" : "bg-slate-400 hover:bg-slate-400"}>
               {sala.status === "open" ? "Aberta" : "Fechada"}
             </Badge>
+            {sala.questionsLocked && sala.status === "open" && (
+              <Badge className="bg-amber-500 hover:bg-amber-500 gap-1">
+                <Lock className="w-3 h-3" /> Perguntas bloqueadas
+              </Badge>
+            )}
             <div className="flex-1" />
             <Button variant="outline" size="sm" className="gap-1"
               onClick={() => { navigator.clipboard?.writeText(publicRoomUrl(sala.code)); toast.success("Link copiado!"); }}
@@ -189,6 +207,15 @@ export default function PerguntasAoVivoSala() {
             >
               <ExternalLink className="w-4 h-4" /> Ao vivo
             </Button>
+            {canManage && sala.status === "open" && (
+              <Button variant="outline" size="sm" className="gap-1"
+                onClick={toggleBloqueio}
+              >
+                {sala.questionsLocked
+                  ? <><LockOpen className="w-4 h-4" /> Permitir perguntas</>
+                  : <><Lock className="w-4 h-4" /> Bloquear perguntas</>}
+              </Button>
+            )}
             {canManage && (
               <Button size="sm"
                 className={sala.status === "open" ? "bg-amber-500 hover:bg-amber-600" : "bg-emerald-500 hover:bg-emerald-600"}

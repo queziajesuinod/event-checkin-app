@@ -12,6 +12,7 @@ export interface LiveQaSession {
   title: string;
   description?: string | null;
   status: "open" | "closed";
+  questionsLocked?: boolean;
   liveTheme?: unknown;
   createdAt?: string;
 }
@@ -44,8 +45,10 @@ export const liveQaAPI = {
   listSessions: () => api.get<LiveQaSession[]>("/api/admin/qa/sessions"),
   createSession: (data: { title: string; description?: string }) =>
     api.post<LiveQaSession>("/api/admin/qa/sessions", data),
-  updateSession: (id: string, data: { title?: string; description?: string; status?: "open" | "closed" }) =>
-    api.put<LiveQaSession>(`/api/admin/qa/sessions/${id}`, data),
+  updateSession: (
+    id: string,
+    data: { title?: string; description?: string; status?: "open" | "closed"; questionsLocked?: boolean },
+  ) => api.put<LiveQaSession>(`/api/admin/qa/sessions/${id}`, data),
   deleteSession: (id: string) => api.delete(`/api/admin/qa/sessions/${id}`),
 
   // Perguntas
