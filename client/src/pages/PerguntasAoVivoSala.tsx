@@ -70,14 +70,21 @@ export default function PerguntasAoVivoSala() {
 
   const moderar = async (id: string, payload: ModeratePayload) => {
     busy.current = true;
+    let atualizado = false;
     try {
       await liveQaAPI.moderateQuestion(id, payload);
-      await carregarPerguntas();
+      atualizado = true;
     } catch {
       toast.error("Erro ao moderar.");
     } finally {
       busy.current = false;
     }
+
+    if (atualizado) await carregarPerguntas();
+  };
+
+  const responderAgora = (id: string) => {
+    moderar(id, { isLive: true });
   };
 
   const excluir = async (id: string) => {
@@ -152,8 +159,8 @@ export default function PerguntasAoVivoSala() {
               <Square className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
             </Button>
           ) : (
-            <Button size="icon" variant="ghost" className="h-11 w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 rounded-xl bg-indigo-100 text-indigo-700 hover:bg-indigo-200" title="Responder agora (ao vivo)"
-              onClick={() => moderar(q.id, { isLive: true })}
+            <Button size="icon" variant="ghost" className="h-11 w-11 md:h-12 md:w-12 lg:h-14 lg:w-14 rounded-xl bg-indigo-100 text-indigo-700 hover:bg-indigo-200" title="Responder agora (marca a anterior como respondida)"
+              onClick={() => responderAgora(q.id)}
             >
               <Tv className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
             </Button>
