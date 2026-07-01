@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useHeader } from "@/contexts/HeaderContext";
-import { Calendar, Church, ChevronRight, Users, MessageCircleQuestion } from "lucide-react";
+import { Calendar, Church, ChevronRight, Users, MessageCircleQuestion, QrCode } from "lucide-react";
 import { useLocation } from "wouter";
 
 const C = {
@@ -95,9 +95,10 @@ export default function Home() {
     isAdmin ||
     permissoes.includes("PERGUNTAS_AO_VIVO_GERENCIAR") ||
     permissoes.includes("PERGUNTAS_AO_VIVO_MODERAR");
+  const showCfm = isAdmin || permissoes.includes("CFM_ADMIN");
 
   const firstName = user?.name?.split(" ")[0] ?? "Usuário";
-  const hasAny = showEventos || showCultos || showCelula || showPerguntas;
+  const hasAny = showEventos || showCultos || showCelula || showPerguntas || showCfm;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
@@ -163,6 +164,18 @@ export default function Home() {
                   sublabel="Moderar perguntas"
                   gradient={["#4F46E5", "#7C3AED"]}
                   onClick={() => setLocation("/perguntas")}
+                />
+              </div>
+            )}
+
+            {showCfm && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '500ms' }}>
+                <Tile
+                  icon={<QrCode className="w-6 h-6 text-white" />}
+                  label="Presença CFM"
+                  sublabel="Leitura de QR Code"
+                  gradient={["#92400E", "#D97706"]}
+                  onClick={() => setLocation("/cfm/presenca")}
                 />
               </div>
             )}

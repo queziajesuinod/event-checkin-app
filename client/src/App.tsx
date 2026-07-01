@@ -28,6 +28,7 @@ import CelulaLider from "./pages/CelulaLider";
 import CelulaPresenca from "./pages/CelulaPresenca";
 import PerguntasAoVivo from "./pages/PerguntasAoVivo";
 import PerguntasAoVivoSala from "./pages/PerguntasAoVivoSala";
+import CfmPresenca from "./pages/cfm/CfmPresenca";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -69,6 +70,7 @@ function Router() {
       <Route path={"/perguntas/:id"} component={() => <ProtectedRoute component={PerguntasAoVivoSala} />} />
       <Route path={"/celula"} component={() => <ProtectedRoute component={CelulaLider} />} />
       <Route path={"/celula/presenca/:reuniaoId"} component={() => <ProtectedRoute component={CelulaPresenca} />} />
+      <Route path={"/cfm/presenca"} component={() => <ProtectedRoute component={CfmPresenca} />} />
       <Route path={"/:eventId"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/:eventId/checkin"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/"} component={Login} />

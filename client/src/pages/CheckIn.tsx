@@ -10,6 +10,7 @@ import {
   Loader2,
   MapPin,
   QrCode,
+  ScanLine,
   Smartphone,
   Trash2,
   Type,
@@ -17,6 +18,13 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
+
+const QR_CORNERS = [
+  { pos: 'top-0 left-0',     borders: 'border-t-[3px] border-l-[3px] rounded-tl-xl' },
+  { pos: 'top-0 right-0',    borders: 'border-t-[3px] border-r-[3px] rounded-tr-xl' },
+  { pos: 'bottom-0 left-0',  borders: 'border-b-[3px] border-l-[3px] rounded-bl-xl' },
+  { pos: 'bottom-0 right-0', borders: 'border-b-[3px] border-r-[3px] rounded-br-xl' },
+];
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
 
@@ -1765,19 +1773,70 @@ export default function CheckIn() {
 
             {/* ── QR Code ── */}
             {method === 'qrcode' && (
-              <div className="space-y-4">
-                <div
-                  className="overflow-hidden rounded-2xl bg-black"
-                  style={{ boxShadow: '0 4px 20px rgba(10,31,63,0.15)' }}
-                >
-                  <video ref={videoRef} className="w-full aspect-square object-cover" muted playsInline autoPlay />
+              <div className="space-y-3">
+                {/* Camera card — compacto e centralizado */}
+                <div className="flex justify-center">
+                  <div
+                    className="rounded-3xl overflow-hidden w-full"
+                    style={{ maxWidth: 300, backgroundColor: '#000', boxShadow: '0 4px 20px rgba(10,31,63,0.15)' }}
+                  >
+                    <div className="relative">
+                      <video
+                        ref={videoRef}
+                        className="w-full object-cover"
+                        style={{ aspectRatio: '1 / 1', display: 'block' }}
+                        muted
+                        playsInline
+                        autoPlay
+                      />
+                      {/* L-corner markers */}
+                      {isCameraActive && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div
+                            className="absolute inset-0"
+                            style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.45) 70%)' }}
+                          />
+                          <div className="relative z-10" style={{ width: 150, height: 150 }}>
+                            {QR_CORNERS.map(({ pos, borders }, i) => (
+                              <div
+                                key={i}
+                                className={`absolute ${pos} ${borders} w-7 h-7`}
+                                style={{ borderColor: '#C9A84C' }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Badge flutuante */}
+                      <div
+                        className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full px-3 py-1"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap' }}
+                      >
+                        <ScanLine size={12} style={{ color: '#C9A84C' }} />
+                        <span className="text-xs font-medium text-white">
+                          {isCameraActive
+                            ? (isQrFallbackMode ? 'Modo compatibilidade' : 'Aguardando QR Code…')
+                            : 'Iniciando câmera…'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
+                {/* Instrução */}
                 <div
-                  className="rounded-xl px-4 py-3 text-center text-sm"
-                  style={{ backgroundColor: '#EBF2FB', color: '#1B4D8E' }}
+                  className="rounded-2xl px-4 py-3 flex items-center gap-3"
+                  style={{ backgroundColor: '#fff', boxShadow: '0 2px 8px rgba(10,31,63,0.06)' }}
                 >
-                  {scanStatus || 'Aguardando leitura do QR Code...'}
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: '#EBF2FB' }}
+                  >
+                    <QrCode size={16} style={{ color: '#1B4D8E' }} />
+                  </div>
+                  <p className="text-sm" style={{ color: '#374151' }}>
+                    {scanStatus || 'Aponte para o QR Code do participante'}
+                  </p>
                 </div>
 
                 {!isQrSupported && (
