@@ -10,6 +10,8 @@ export interface ImagePalette {
   accent: string;
   /** Cor de texto legível sobre o acento (#fff ou #0f172a). */
   accentText: string;
+  /** box-shadow colorido (puxa o tom da imagem) para cards/boxes. */
+  shadow: string;
 }
 
 type RGB = [number, number, number];
@@ -87,12 +89,15 @@ export function extractImagePalette(src: string): Promise<ImagePalette | null> {
         const accent = bestVibrant ?? avg;
         const overlay = darkenToLuminance(avg, 0.16);
         const overlayStrong = darkenToLuminance(accent, 0.09);
+        // Sombra colorida: tom vibrante da imagem, opaca e difusa (efeito "glow")
+        const shadowColor = darkenToLuminance(accent, 0.28);
 
         resolve({
           overlay: `rgba(${overlay[0]}, ${overlay[1]}, ${overlay[2]}, 0.66)`,
           overlayStrong: `rgba(${overlayStrong[0]}, ${overlayStrong[1]}, ${overlayStrong[2]}, 0.8)`,
           accent: `rgb(${accent[0]}, ${accent[1]}, ${accent[2]})`,
           accentText: relativeLuminance(accent) > 0.6 ? '#0f172a' : '#ffffff',
+          shadow: `0 22px 48px -12px rgba(${shadowColor[0]}, ${shadowColor[1]}, ${shadowColor[2]}, 0.6)`,
         });
       } catch {
         // Canvas "tainted" (imagem cross-origin sem CORS) — usa fallback.

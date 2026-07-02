@@ -118,6 +118,7 @@ export interface CouponValidation {
     discountType: 'percentage' | 'fixed';
     discountValue: number;
   };
+  allowedPaymentTypes?: string[] | null;
   message?: string;
 }
 

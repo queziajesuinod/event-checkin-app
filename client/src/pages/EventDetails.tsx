@@ -234,6 +234,7 @@ export default function EventDetails() {
   // Estado do formulário
   const [cupomCodigo, setCupomCodigo] = useState('');
   const [cupomValido, setCupomValido] = useState<any>(null);
+  const [cupomFormasPermitidas, setCupomFormasPermitidas] = useState<string[] | null>(null);
   const [validandoCupom, setValidandoCupom] = useState(false);
   const [dadosComprador, setDadosComprador] = useState<Record<string, any>>({});
   const [inscritos, setInscritos] = useState<Array<{
@@ -525,9 +526,18 @@ export default function EventDetails() {
       });
       if (resultado.valido) {
         setCupomValido(resultado.coupon);
+        const permitidas = resultado.allowedPaymentTypes?.length ? resultado.allowedPaymentTypes : null;
+        setCupomFormasPermitidas(permitidas);
+        if (permitidas && formaPagamento) {
+          const formaAtual = formasPagamento.find((f) => f.id.toString() === formaPagamento);
+          if (formaAtual && !permitidas.includes(formaAtual.paymentType)) {
+            setFormaPagamento('');
+          }
+        }
         toast.success('Cupom aplicado com sucesso!');
       } else {
         setCupomValido(null);
+        setCupomFormasPermitidas(null);
         const resultadoMessage =
           getMessageFromPayload(resultado.message) || 'Cupom inválido';
         toast.error(resultadoMessage);
@@ -542,6 +552,7 @@ export default function EventDetails() {
         getMessageFromPayload(axiosLikeError.message) ||
         'Erro ao validar cupom';
       setCupomValido(null);
+      setCupomFormasPermitidas(null);
       toast.error(errorMessage);
     } finally {
       setValidandoCupom(false);
@@ -1257,7 +1268,10 @@ export default function EventDetails() {
             <div className="sticky top-20 space-y-4">
               {/* Imagem destaque */}
               {evento.imageUrl && (
-                <div className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-2xl">
+                <div
+                  className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-2xl"
+                  style={palette ? { boxShadow: palette.shadow } : undefined}
+                >
                   <img src={evento.imageUrl} alt={evento.title} className="w-full h-full object-cover" />
                   {!hasLotAvailable && (
                     <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5">
@@ -1269,7 +1283,10 @@ export default function EventDetails() {
               )}
 
               {/* Card Ingressos */}
-              <div className="bg-white rounded-2xl shadow-xl p-5">
+              <div
+                className="bg-white rounded-2xl shadow-xl p-5"
+                style={palette ? { boxShadow: palette.shadow } : undefined}
+              >
                 <h3 className="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
                   <span
                     className="h-4 w-1 rounded-full bg-primary"
@@ -1722,38 +1739,52 @@ export default function EventDetails() {
                     ) : (
                       <>
                         {/* Tabs de forma de pagamento */}
-                        <div className={`grid gap-3 ${formasPagamento.length === 1 ? 'grid-cols-1' : formasPagamento.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                          {formasPagamento.map((forma) => {
-                            const isSelected = formaPagamento === forma.id.toString();
-                            const label =
-                              forma.paymentType === 'credit_card'
-                                ? `Cartão${forma.maxInstallments > 1 ? ` (${forma.maxInstallments}x)` : ''}`
-                                : forma.paymentType === 'pix'
-                                ? 'PIX'
-                                : 'Boleto';
-                            const Icon =
-                              forma.paymentType === 'pix' ? QrCode : CreditCard;
-                            return (
-                              <button
-                                key={forma.id}
-                                type="button"
-                                onClick={() => {
-                                  setFormaPagamento(forma.id.toString());
-                                  if (forma.paymentType !== 'credit_card') setParcelas(1);
-                                }}
-                                className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3.5 text-sm font-medium transition-all ${
-                                  isSelected
-                                    ? 'border-primary bg-primary/5 text-primary'
-                                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                }`}
-                              >
-                                <Icon className="h-4 w-4" />
-                                {label}
-                                {isSelected && <Check className="h-3.5 w-3.5 ml-1" />}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        {(() => {
+                          const formasFiltradas = cupomFormasPermitidas
+                            ? formasPagamento.filter((f) => cupomFormasPermitidas.includes(f.paymentType))
+                            : formasPagamento;
+                          const LABEL_METODO: Record<string, string> = { pix: 'PIX', credit_card: 'Cartão de Crédito', boleto: 'Boleto' };
+                          return (
+                            <>
+                              {cupomFormasPermitidas && (
+                                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                  Este cupom é válido apenas para: {cupomFormasPermitidas.map((t) => LABEL_METODO[t] || t).join(' ou ')}
+                                </p>
+                              )}
+                              <div className={`grid gap-3 ${formasFiltradas.length === 1 ? 'grid-cols-1' : formasFiltradas.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                                {formasFiltradas.map((forma) => {
+                                  const isSelected = formaPagamento === forma.id.toString();
+                                  const label =
+                                    forma.paymentType === 'credit_card'
+                                      ? `Cartão${forma.maxInstallments > 1 ? ` (${forma.maxInstallments}x)` : ''}`
+                                      : forma.paymentType === 'pix'
+                                      ? 'PIX'
+                                      : 'Boleto';
+                                  const Icon = forma.paymentType === 'pix' ? QrCode : CreditCard;
+                                  return (
+                                    <button
+                                      key={forma.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setFormaPagamento(forma.id.toString());
+                                        if (forma.paymentType !== 'credit_card') setParcelas(1);
+                                      }}
+                                      className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3.5 text-sm font-medium transition-all ${
+                                        isSelected
+                                          ? 'border-primary bg-primary/5 text-primary'
+                                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      <Icon className="h-4 w-4" />
+                                      {label}
+                                      {isSelected && <Check className="h-3.5 w-3.5 ml-1" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          );
+                        })()}
 
                         {/* Opções de sinal */}
                         {isBalanceDue && totalSemJuros > 0 && (
@@ -1896,14 +1927,17 @@ export default function EventDetails() {
                             <Switch
                               id="cupom-toggle"
                               checked={cupomAberto}
-                              onCheckedChange={setCupomAberto}
+                              onCheckedChange={(v) => {
+                                setCupomAberto(v);
+                                if (!v) { setCupomValido(null); setCupomFormasPermitidas(null); setCupomCodigo(''); }
+                              }}
                             />
                           </div>
                           {cupomAberto && (
                             <div className="flex gap-2">
                               <Input
                                 value={cupomCodigo}
-                                onChange={(e) => { setCupomCodigo(e.target.value.toUpperCase()); setCupomValido(null); }}
+                                onChange={(e) => { setCupomCodigo(e.target.value.toUpperCase()); setCupomValido(null); setCupomFormasPermitidas(null); }}
                                 placeholder="Código do cupom"
                                 className="flex-1 text-sm"
                               />
