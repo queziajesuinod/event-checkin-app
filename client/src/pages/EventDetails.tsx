@@ -693,12 +693,8 @@ export default function EventDetails() {
         return;
       }
     }
-    for (const campo of camposComprador) {
-      if (campo.isRequired && !dadosComprador[campo.fieldName]) {
-        toast.error(`Campo obrigatório: ${campo.label}`);
-        return;
-      }
-    }
+    // Os dados do comprador agora são preenchidos na etapa de pagamento;
+    // a validação deles ocorre no envio final (validarFormulario).
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -969,8 +965,8 @@ export default function EventDetails() {
           <RadioGroup value={valor || ''} onValueChange={onChange}>
             {campo.options?.map((opt) => (
               <div key={opt} className="flex items-center space-x-2">
-                <RadioGroupItem value={opt} id={`${campo.fieldName}-${opt}`} />
-                <Label htmlFor={`${campo.fieldName}-${opt}`}>{opt}</Label>
+                <RadioGroupItem value={opt} id={`${campo.fieldName}-${opt}`} className="size-5 bg-white border-slate-400" />
+                <Label htmlFor={`${campo.fieldName}-${opt}`} className="cursor-pointer">{opt}</Label>
               </div>
             ))}
           </RadioGroup>
@@ -983,6 +979,7 @@ export default function EventDetails() {
               <div key={opt} className="flex items-center space-x-2">
                 <Checkbox
                   id={`${campo.fieldName}-${opt}`}
+                  className="size-5 bg-white border-slate-400"
                   checked={Array.isArray(valor) && valor.includes(opt)}
                   onCheckedChange={(checked) => {
                     const newValue = Array.isArray(valor) ? [...valor] : [];
@@ -1107,9 +1104,25 @@ export default function EventDetails() {
 
   // ──── VIEW: DETALHE DO EVENTO ────
   if (view === 'detail') {
-    const dateLabel = new Date(evento.startDate).toLocaleDateString('pt-BR', {
-      day: '2-digit', month: 'long', year: 'numeric',
-    });
+    const fmtDataCompleta = (d: Date) =>
+      d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const inicio = new Date(evento.startDate);
+    const fim = evento.endDate ? new Date(evento.endDate) : null;
+    let dateLabel = fmtDataCompleta(inicio);
+    if (fim && !Number.isNaN(fim.getTime()) && inicio.toDateString() !== fim.toDateString()) {
+      const mesmoAno = inicio.getFullYear() === fim.getFullYear();
+      const mesmoMes = mesmoAno && inicio.getMonth() === fim.getMonth();
+      if (mesmoMes) {
+        // "17 a 20 de julho de 2026"
+        dateLabel = `${String(inicio.getDate()).padStart(2, '0')} a ${fmtDataCompleta(fim)}`;
+      } else if (mesmoAno) {
+        // "30 de julho a 02 de agosto de 2026"
+        const inicioSemAno = inicio.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+        dateLabel = `${inicioSemAno} a ${fmtDataCompleta(fim)}`;
+      } else {
+        dateLabel = `${fmtDataCompleta(inicio)} a ${fmtDataCompleta(fim)}`;
+      }
+    }
     const maxPerBuyer = evento.maxPerBuyer || 10;
     const totalQty = Object.values(quantities).reduce((s, n) => s + n, 0);
     const totalAmount = lotes.reduce(
@@ -1506,31 +1519,6 @@ export default function EventDetails() {
                 </div>
               )}
 
-              {/* Dados do Comprador */}
-              {camposComprador.length > 0 && (
-                <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6">
-                  <h2 className="text-base font-semibold text-slate-900 mb-5">Seus dados</h2>
-                  <div className="space-y-4">
-                    {camposComprador.map((campo) => (
-                      <div key={campo.id}>
-                        <Label htmlFor={campo.fieldName} className="text-sm font-medium text-slate-700">
-                          {campo.label}
-                          {campo.isRequired && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
-                        <div className="mt-1.5">
-                          {renderCampo(
-                            campo,
-                            dadosComprador[campo.fieldName],
-                            (value) => setDadosComprador((prev) => ({ ...prev, [campo.fieldName]: value })),
-                            campo.fieldName
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Inscritos */}
               {camposInscrito.length > 0 && (
                 <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6">
@@ -1728,8 +1716,33 @@ export default function EventDetails() {
           {step === 2 && (
             <div className="grid lg:grid-cols-[1fr_400px] gap-8 items-start">
 
-              {/* Esquerda: Forma de pagamento */}
+              {/* Esquerda: Dados do comprador + Forma de pagamento */}
               <div className="space-y-5">
+                {/* Dados do Comprador */}
+                {camposComprador.length > 0 && (
+                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6">
+                    <h2 className="text-base font-semibold text-slate-900 mb-5">Seus dados</h2>
+                    <div className="space-y-4">
+                      {camposComprador.map((campo) => (
+                        <div key={campo.id}>
+                          <Label htmlFor={campo.fieldName} className="text-sm font-medium text-slate-700">
+                            {campo.label}
+                            {campo.isRequired && <span className="text-red-500 ml-1">*</span>}
+                          </Label>
+                          <div className="mt-1.5">
+                            {renderCampo(
+                              campo,
+                              dadosComprador[campo.fieldName],
+                              (value) => setDadosComprador((prev) => ({ ...prev, [campo.fieldName]: value })),
+                              campo.fieldName
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {requiresPayment ? (
                   <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6 space-y-5">
                     <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
