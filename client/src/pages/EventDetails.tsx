@@ -869,10 +869,13 @@ export default function EventDetails() {
     onChange: (value: any) => void,
     inputId?: string
   ) => {
+    // Borda mais escura + fundo branco + largura total para os campos ficarem nítidos
+    const fieldClass = 'w-full bg-white border-slate-400 focus-visible:border-primary';
     const commonProps = {
       id: inputId || campo.fieldName,
       placeholder: campo.placeholder,
       required: campo.isRequired,
+      className: fieldClass,
     };
 
     switch (campo.fieldType) {
@@ -950,7 +953,7 @@ export default function EventDetails() {
       case 'select':
         return (
           <Select value={valor || ''} onValueChange={onChange}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full bg-white border-slate-400 focus:border-primary">
               <SelectValue placeholder={campo.placeholder || 'Selecione...'} />
             </SelectTrigger>
             <SelectContent>
@@ -1596,7 +1599,7 @@ export default function EventDetails() {
                                 }
                                 disabled={!lotesAtivosNoRange.length}
                               >
-                                <SelectTrigger className="mt-1.5">
+                                <SelectTrigger className="mt-1.5 w-full bg-white border-slate-400 focus:border-primary">
                                   <SelectValue placeholder="Selecione o lote" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1832,7 +1835,7 @@ export default function EventDetails() {
                           <div>
                             <Label className="text-sm font-medium text-slate-700">Parcelas</Label>
                             <Select value={parcelas.toString()} onValueChange={(v) => setParcelas(parseInt(v))}>
-                              <SelectTrigger className="mt-1.5">
+                              <SelectTrigger className="mt-1.5 w-full bg-white border-slate-400 focus:border-primary">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
