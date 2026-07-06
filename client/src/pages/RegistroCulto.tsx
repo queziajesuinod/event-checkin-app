@@ -2,7 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useHeader } from '@/contexts/HeaderContext';
-import { cultosAPI, type Campus, type Ministerio, type TipoEvento, type Ministro, type RegistroCulto } from '@/lib/api';
+import { cultosAPI, type Campus, type Ministerio, type TipoEvento, type Ministro, type RegistroCulto, type VoluntariadoInfo } from '@/lib/api';
 import { BookOpen, CalendarDays, Check, ChevronDown, CloudOff, Download, Loader2, MapPin, MessageSquare, Minus, Plus, Users, Wifi, WifiOff, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
@@ -248,6 +248,7 @@ const RegistroCulto = () => {
   const isEditing = Boolean(params.id);
 
   const [form, setForm] = useState(FORM_INICIAL);
+  const [meuVoluntariado, setMeuVoluntariado] = useState<VoluntariadoInfo[]>([]);
   const [campi, setCampi] = useState<Campus[]>([]);
   const [ministerios, setMinisterios] = useState<Ministerio[]>([]);
   const [tiposEvento, setTiposEvento] = useState<TipoEvento[]>([]);
@@ -280,14 +281,42 @@ const RegistroCulto = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const [campiRes, tipos, ministrosRes] = await Promise.all([
+        const [campiRes, tipos, ministrosRes, volRes] = await Promise.all([
           cultosAPI.listarCampi(),
           cultosAPI.listarTiposEvento(true),
           cultosAPI.listarMinistros(true),
+          cultosAPI.buscarMeuVoluntariado().catch(() => ({ data: [] as VoluntariadoInfo[] })),
         ]);
-        setCampi(Array.isArray(campiRes.data) ? campiRes.data : []);
+
+        const volInfo: VoluntariadoInfo[] = volRes.data || [];
+        setMeuVoluntariado(volInfo);
+
+        const todosOsCampi: Campus[] = Array.isArray(campiRes.data) ? campiRes.data : [];
+        const campusPermitidos = volInfo.filter(v => v.campusId).map(v => v.campusId!);
+        const campiFiltrados = campusPermitidos.length > 0
+          ? todosOsCampi.filter(c => campusPermitidos.includes(c.id))
+          : todosOsCampi;
+        setCampi(campiFiltrados);
+
         setTiposEvento(tipos.data || []);
         setMinistros(ministrosRes.data || []);
+
+        // Auto-selecionar se só tem um campus aprovado
+        if (campiFiltrados.length === 1 && !isEditing) {
+          const campus = campiFiltrados[0];
+          const minRes = await cultosAPI.listarMinisteriosPorCampus(campus.id);
+          const todosMin: Ministerio[] = minRes.data || [];
+          const minPermitidos = volInfo.filter(v => v.campusId === campus.id && v.ministerioId).map(v => v.ministerioId!);
+          const minFiltrados = minPermitidos.length > 0 ? todosMin.filter(m => minPermitidos.includes(m.id)) : todosMin;
+          setMinisterios(minFiltrados);
+          const autoMin = minFiltrados.length === 1 ? minFiltrados[0].id : '';
+          setForm(prev => ({
+            ...prev,
+            campusId: campus.id,
+            ministerioId: autoMin,
+            teveApelo: autoMin ? (minFiltrados[0]?.apeloDefault || false) : prev.teveApelo,
+          }));
+        }
       } catch {
         toast.error('Erro ao carregar dados iniciais');
       } finally {
@@ -382,7 +411,13 @@ const RegistroCulto = () => {
     }
     try {
       const res = await cultosAPI.listarMinisteriosPorCampus(campusId);
-      setMinisterios(res.data || []);
+      const todosMin: Ministerio[] = res.data || [];
+      const minPermitidos = meuVoluntariado.filter(v => v.campusId === campusId && v.ministerioId).map(v => v.ministerioId!);
+      const minFiltrados = minPermitidos.length > 0 ? todosMin.filter(m => minPermitidos.includes(m.id)) : todosMin;
+      setMinisterios(minFiltrados);
+      if (minFiltrados.length === 1) {
+        setForm((prev) => ({ ...prev, ministerioId: minFiltrados[0].id, teveApelo: minFiltrados[0].apeloDefault || false }));
+      }
     } catch {
       toast.error('Erro ao carregar ministérios do campus');
       setMinisterios([]);

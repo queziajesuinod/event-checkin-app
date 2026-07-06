@@ -274,7 +274,17 @@ export interface Campus {
   transmiteOnline?: boolean;
 }
 
+export interface VoluntariadoInfo {
+  campusId: string | null;
+  campusNome: string | null;
+  transmiteOnline?: boolean;
+  ministerioId: string | null;
+  ministerioNome: string | null;
+  ministerio?: Ministerio | null;
+}
+
 const cultosAPI = {
+  buscarMeuVoluntariado: () => api.get<VoluntariadoInfo[]>('/api/admin/cultos/meu-voluntariado'),
   listarMinisteriosPorCampus: (campusId: string) => api.get(`/api/admin/cultos/campus/${campusId}/ministerios`),
   listarTiposEvento: (ativo?: boolean) => api.get('/api/admin/cultos/tipos-evento', { params: { ativo } }),
   criarRegistro: (dados: Omit<RegistroCulto, 'id'>) => api.post('/api/admin/cultos/registros', dados),
