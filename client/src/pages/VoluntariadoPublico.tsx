@@ -47,14 +47,28 @@ function getErrorMessage(error: unknown): string {
   if (!axios.isAxiosError(error)) {
     return "Não foi possível concluir o cadastro. Tente novamente.";
   }
+
+  // Requisição expirou (servidor não respondeu a tempo)
+  if (error.code === "ECONNABORTED" || /timeout/i.test(error.message)) {
+    return "O servidor demorou para responder. Verifique se você já possui cadastro (nesse caso, entre e adicione o voluntariado) ou tente novamente em instantes.";
+  }
+
+  const status = error.response?.status;
   const data = error.response?.data;
-  if (typeof data === "string" && data.trim()) return data;
+  let backendMessage = "";
+  if (typeof data === "string" && data.trim()) backendMessage = data;
   if (data && typeof data === "object") {
     const d = data as { message?: unknown; error?: unknown };
-    if (typeof d.message === "string" && d.message.trim()) return d.message;
-    if (typeof d.error === "string" && d.error.trim()) return d.error;
+    if (typeof d.message === "string" && d.message.trim()) backendMessage = d.message;
+    else if (typeof d.error === "string" && d.error.trim()) backendMessage = d.error;
   }
-  return "Não foi possível concluir o cadastro. Verifique os dados e tente novamente.";
+
+  // Cadastro duplicado (CPF/e-mail já existente)
+  if (status === 409 || /(já existe|ja existe|duplicad|already exists|unique)/i.test(backendMessage)) {
+    return backendMessage || "Este CPF ou e-mail já possui cadastro. Faça login e adicione o voluntariado pelo seu perfil.";
+  }
+
+  return backendMessage || "Não foi possível concluir o cadastro. Verifique os dados e tente novamente.";
 }
 
 interface EntradaForm {

@@ -154,6 +154,7 @@ const api = axios.create({
 
 const publicApi = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000, // evita ficar "Enviando..." para sempre se o servidor não responder
   headers: {
     "Content-Type": "application/json",
   },
