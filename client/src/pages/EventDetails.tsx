@@ -1330,6 +1330,9 @@ export default function EventDetails() {
                     {lotes.map((lote) => {
                       const esgotado = lote.vagasDisponiveis != null && lote.vagasDisponiveis <= 0;
                       const ativo = isBatchActiveNow(lote);
+                      const naoComecou = lote.startDate
+                        ? new Date(lote.startDate).getTime() > Date.now()
+                        : false;
                       const disponivel = ativo && !esgotado;
                       const qty = quantities[lote.id] || 0;
 
@@ -1344,8 +1347,8 @@ export default function EventDetails() {
                               R$ {Number(lote.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </p>
                             {!disponivel && (
-                              <p className="text-xs text-red-500 mt-0.5">
-                                {!ativo ? 'Encerrado' : 'Esgotado'}
+                              <p className={`text-xs mt-0.5 ${naoComecou ? 'text-blue-500' : 'text-red-500'}`}>
+                                {esgotado ? 'Esgotado' : naoComecou ? 'Em breve' : 'Encerrado'}
                               </p>
                             )}
                           </div>
@@ -1375,7 +1378,9 @@ export default function EventDetails() {
                               </button>
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-400 shrink-0">Indisponível</span>
+                            <span className={`text-xs shrink-0 font-medium ${naoComecou ? 'text-blue-500' : 'text-slate-400'}`}>
+                              {naoComecou ? 'Em breve' : 'Indisponível'}
+                            </span>
                           )}
                         </div>
                       );
