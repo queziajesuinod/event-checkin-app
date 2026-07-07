@@ -204,12 +204,25 @@ export default function EventList() {
     });
   }, [eventos, busca, tipoSelecionado]);
 
+  // Evento já aconteceu (data final — ou inicial como fallback — no passado)
+  const eventoJaPassou = (evento: Event) => {
+    const ref = evento.endDate || evento.startDate;
+    const fim = ref ? new Date(ref) : null;
+    return !!fim && !Number.isNaN(fim.getTime()) && fim.getTime() < Date.now();
+  };
+
   const eventosAbertos = useMemo(
     () => eventosFiltrados.filter(eventoEstaAberto),
     [eventosFiltrados, batchAvailability, loadingBatchAvailability]
   );
+  // Próximos: inscrição ainda não aberta, mas o evento é futuro
+  const eventosProximos = useMemo(
+    () => eventosFiltrados.filter((e) => !eventoEstaAberto(e) && !eventoJaPassou(e)),
+    [eventosFiltrados, batchAvailability, loadingBatchAvailability]
+  );
+  // Encerrados: só os que já aconteceram
   const eventosEncerrados = useMemo(
-    () => eventosFiltrados.filter((evento) => !eventoEstaAberto(evento)),
+    () => eventosFiltrados.filter((e) => !eventoEstaAberto(e) && eventoJaPassou(e)),
     [eventosFiltrados, batchAvailability, loadingBatchAvailability]
   );
   const temFiltroAtivo = busca.trim() !== '' || tipoSelecionado !== 'todos';
@@ -337,21 +350,30 @@ export default function EventList() {
     return evento.maxRegistrations - evento.currentRegistrations;
   };
 
-  const renderCard = (evento: Event, index = 0) => {
+  const renderCard = (evento: Event, index = 0, kind: 'open' | 'upcoming' | 'past' = 'open') => {
+    const isUpcoming = kind === 'upcoming';
+    const isPast = kind === 'past';
     const vagasDisponiveis = calcularVagasDisponiveis(evento);
     const esgotado = vagasDisponiveis !== null && vagasDisponiveis <= 0;
     const availability = batchAvailability[evento.id];
     const availabilityLoading = loadingBatchAvailability[evento.id] ?? true;
     const possuiLoteAtivo = availability?.hasActiveBatch ?? false;
-    const podeIrDetalhes = !availabilityLoading && possuiLoteAtivo && !esgotado;
-    const encerrado = !availabilityLoading && (!possuiLoteAtivo || esgotado);
-    const botaoLabel = availabilityLoading
-      ? 'Verificando...'
-      : esgotado
-        ? 'Esgotado'
-        : possuiLoteAtivo
-          ? 'Ver detalhes'
-          : 'Encerrado';
+    // Encerrado só serve para o visual esmaecido (eventos passados)
+    const encerrado = isPast;
+    const podeIrDetalhes = isUpcoming
+      ? true
+      : !isPast && !availabilityLoading && possuiLoteAtivo && !esgotado;
+    const botaoLabel = isPast
+      ? 'Encerrado'
+      : isUpcoming
+        ? 'Ver detalhes'
+        : availabilityLoading
+          ? 'Verificando...'
+          : esgotado
+            ? 'Esgotado'
+            : possuiLoteAtivo
+              ? 'Ver detalhes'
+              : 'Encerrado';
 
     return (
       <div
@@ -396,6 +418,14 @@ export default function EventList() {
               {evento.eventType}
             </span>
           )}
+
+          {/* Selo "Em breve" para próximos eventos */}
+          {isUpcoming && (
+            <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-blue-600/90 backdrop-blur-sm text-white text-[11px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+              Em breve
+            </span>
+          )}
         </div>
 
         <div className="flex flex-col flex-1 p-5 gap-3">
@@ -438,7 +468,7 @@ export default function EventList() {
               onClick={() => setLocation(`/eventos/${evento.id}`)}
               disabled={!podeIrDetalhes}
               className="w-full"
-              variant={encerrado ? 'secondary' : 'default'}
+              variant={isPast ? 'secondary' : isUpcoming ? 'outline' : 'default'}
             >
               {botaoLabel}
             </Button>
@@ -594,7 +624,23 @@ export default function EventList() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {eventosAbertos.map(renderCard)}
+                  {eventosAbertos.map((e, i) => renderCard(e, i, 'open'))}
+                </div>
+              </section>
+            )}
+
+            {/* Próximos eventos */}
+            {eventosProximos.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2.5 mb-4">
+                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                  <h2 className="text-lg font-bold text-slate-900">Próximos eventos</h2>
+                  <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                    {eventosProximos.length}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {eventosProximos.map((e, i) => renderCard(e, i, 'upcoming'))}
                 </div>
               </section>
             )}
@@ -610,7 +656,7 @@ export default function EventList() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {eventosEncerrados.map(renderCard)}
+                  {eventosEncerrados.map((e, i) => renderCard(e, i, 'past'))}
                 </div>
               </section>
             )}
