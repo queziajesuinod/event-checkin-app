@@ -781,6 +781,19 @@ export default function EventDetails() {
     );
 
     if (isSuccessful) {
+      // Inscrição duplicada: redirecionar para o PIX pendente já existente
+      if ((resultado as RegistrationResponse & { duplicata?: boolean }).duplicata) {
+        toast.info('Você já tem uma inscrição pendente para este evento.', {
+          description: 'Redirecionando para o pagamento PIX existente...',
+        });
+        const pixCode = resultado.pagamento?.qrCodeString || '';
+        const qrCode = resultado.pagamento?.qrCodeBase64 || '';
+        setLocation(
+          `/pix-confirmacao?orderCode=${resultado.orderCode}&pixCode=${encodeURIComponent(pixCode)}&qrCode=${encodeURIComponent(qrCode)}`
+        );
+        return;
+      }
+
       if (!requiresPayment) {
         setLocation(`/ticket/${resultado.orderCode}`);
         return;
