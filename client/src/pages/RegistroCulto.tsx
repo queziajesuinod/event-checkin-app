@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useHeader } from '@/contexts/HeaderContext';
 import { cultosAPI, type Campus, type Ministerio, type TipoEvento, type Ministro, type RegistroCulto, type VoluntariadoInfo } from '@/lib/api';
-import { BookOpen, CalendarDays, Check, ChevronDown, CloudOff, Download, Loader2, MapPin, MessageSquare, Minus, Plus, Users, Wifi, WifiOff, X } from 'lucide-react';
+import { BookOpen, CalendarDays, Check, ChevronDown, CloudOff, Copy, Download, Loader2, MapPin, MessageSquare, Minus, Plus, Users, Wifi, WifiOff, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import { toast } from 'sonner';
@@ -551,7 +551,11 @@ const RegistroCulto = () => {
   if (savedSnapshot) {
     const s = savedSnapshot;
     const totalPresenca =
-      s.form.qtdHomens + s.form.qtdMulheres + (s.form.qtdCriancas ?? 0) + (s.form.qtdBebes ?? 0);
+      s.form.qtdHomens +
+      s.form.qtdMulheres +
+      (s.form.qtdCriancas ?? 0) +
+      (s.form.qtdBebes ?? 0) +
+      (s.form.qtdVoluntarios ?? 0);
 
     const rows: { label: string; value: string }[] = [
       { label: 'Data', value: new Date(s.form.data + 'T00:00:00').toLocaleDateString('pt-BR') },
@@ -572,6 +576,17 @@ const RegistroCulto = () => {
       ...(s.form.teveApelo ? [{ label: 'Apelo', value: String(s.form.qtdApelo ?? 0) + ' pessoa(s)' }] : []),
       ...(s.form.comentarios ? [{ label: 'Comentários', value: s.form.comentarios }] : []),
     ];
+
+    const copiarResumo = async () => {
+      const linhas = rows.map((r) => `${r.label}: ${r.value}`).join('\n');
+      const texto = `*Resumo do Registro*\n${linhas}`;
+      try {
+        await navigator.clipboard.writeText(texto);
+        toast.success('Resumo copiado! Cole no WhatsApp.');
+      } catch {
+        toast.error('Não foi possível copiar o resumo.');
+      }
+    };
 
     return (
       <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
@@ -636,6 +651,16 @@ const RegistroCulto = () => {
                 : <><Download className="w-4 h-4" />Sincronizar agora</>}
             </button>
           )}
+
+          {/* Copiar resumo para WhatsApp */}
+          <button
+            onClick={copiarResumo}
+            className="w-full h-12 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 mb-3 transition-all duration-200 active:scale-[0.98]"
+            style={{ backgroundColor: '#25D366' }}
+          >
+            <Copy className="w-4 h-4" />
+            Copiar para WhatsApp
+          </button>
 
           {/* Botões */}
           <div className="flex gap-3">
