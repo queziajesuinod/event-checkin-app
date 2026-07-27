@@ -551,11 +551,7 @@ const RegistroCulto = () => {
   if (savedSnapshot) {
     const s = savedSnapshot;
     const totalPresenca =
-      s.form.qtdHomens +
-      s.form.qtdMulheres +
-      (s.form.qtdCriancas ?? 0) +
-      (s.form.qtdBebes ?? 0) +
-      (s.form.qtdVoluntarios ?? 0);
+      s.form.qtdHomens + s.form.qtdMulheres + (s.form.qtdVoluntarios ?? 0);
 
     const rows: { label: string; value: string }[] = [
       { label: 'Data', value: new Date(s.form.data + 'T00:00:00').toLocaleDateString('pt-BR') },
