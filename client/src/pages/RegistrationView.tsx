@@ -328,9 +328,9 @@ export default function RegistrationView() {
   const paidSemJuros = useMemo(() => {
     return sortedPayments
       .filter((p) => p.status === 'confirmed')
-      .reduce((sum, p) => sum + p.amount, 0);
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   }, [sortedPayments]);
-  const remainingSemJuros = Math.max(0, (registration?.finalPrice ?? 0) - paidSemJuros);
+  const remainingSemJuros = Math.max(0, (Number(registration?.finalPrice) || 0) - paidSemJuros);
 
   // Nome do primeiro inscrito
   const nomeInscrito = registration?.attendees?.[0]?.attendeeData?.nome_completo ?? null;
