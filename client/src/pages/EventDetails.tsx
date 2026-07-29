@@ -230,6 +230,9 @@ export default function EventDetails() {
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // Trava síncrona contra duplo-clique (o setSubmitting é assíncrono e não desabilita
+  // o botão a tempo em internet lenta).
+  const submittingRef = useRef(false);
 
   // Estado do formulário
   const [cupomCodigo, setCupomCodigo] = useState('');
@@ -737,16 +740,22 @@ export default function EventDetails() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!hasLotAvailable) {
-      toast.error('Inscrições encerradas para este evento.');
-      return;
-    }
-
-    if (!validarFormulario()) return;
-    if (!(await ensureSelectedBatchesStillAvailable())) return;
+    // Bloqueia reentrância na hora: em internet lenta a pessoa clica várias vezes antes
+    // do botão desabilitar (setSubmitting é assíncrono e ainda há um await de validação
+    // adiante). Sem isso, cada clique dispara uma inscrição PIX pendente "lixo".
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
 
     try {
-      setSubmitting(true);
+      if (!hasLotAvailable) {
+        toast.error('Inscrições encerradas para este evento.');
+        return;
+      }
+
+      if (!validarFormulario()) return;
+      if (!(await ensureSelectedBatchesStillAvailable())) return;
+
       const pagamentoBase = isBalanceDue ? baseDepositoSemJuros : totalSemJuros;
       const taxaPagamento = selectedPaymentOption?.paymentType === 'credit_card'
         ? calculateInstallmentInterestAmount(pagamentoBase, selectedPaymentOption, parcelas)
@@ -856,6 +865,7 @@ export default function EventDetails() {
         'Erro ao processar inscrição';
       toast.error(errorMessage);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
