@@ -39,6 +39,7 @@ import {
   getInstallmentInterestRule,
 } from '@/lib/installmentInterest';
 import { getCieloDeniedMessage } from '@/lib/paymentDenialReason';
+import { translatePaymentError } from '@/lib/paymentErrorMessages';
 import { extractImagePalette, type ImagePalette } from '@/lib/imagePalette';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -849,9 +850,8 @@ export default function EventDetails() {
     } else {
       const resultadoMessage =
         getMessageFromPayload(resultado) ||
-        getMessageFromPayload((resultado as { message?: unknown }).message) ||
-        'Não foi possível concluir a inscrição.';
-      toast.error(resultadoMessage);
+        getMessageFromPayload((resultado as { message?: unknown }).message);
+      toast.error(translatePaymentError(resultadoMessage, 'Não foi possível concluir a inscrição.'));
     }
   } catch (error: unknown) {
       console.error('Erro ao processar inscrição:', error);
@@ -861,9 +861,8 @@ export default function EventDetails() {
       };
       const errorMessage =
         getMessageFromPayload(axiosLikeError.response?.data) ||
-        getMessageFromPayload(axiosLikeError.message) ||
-        'Erro ao processar inscrição';
-      toast.error(errorMessage);
+        getMessageFromPayload(axiosLikeError.message);
+      toast.error(translatePaymentError(errorMessage, 'Erro ao processar inscrição'));
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

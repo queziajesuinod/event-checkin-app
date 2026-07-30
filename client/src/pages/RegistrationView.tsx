@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { ArrowLeft, CheckCircle2, CreditCard, Loader2, QrCode, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { getFriendlyPaymentError } from '@/lib/paymentErrorMessages';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -482,7 +483,7 @@ export default function RegistrationView() {
       toast.success('Pagamento enviado com sucesso.');
     } catch (error) {
       console.error('Erro ao criar pagamento:', error);
-      toast.error('Não foi possível registrar o pagamento.');
+      toast.error(getFriendlyPaymentError(error, 'Não foi possível registrar o pagamento.'));
     } finally {
       setSubmitting(false);
     }
