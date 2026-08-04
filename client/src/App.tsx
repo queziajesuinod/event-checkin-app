@@ -6,7 +6,7 @@ import ProfileSheet from "./components/ProfileSheet";
 import { HeaderProvider } from "./contexts/HeaderContext";
 import { ProfileSheetProvider } from "./contexts/ProfileSheetContext";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -80,6 +80,13 @@ function Router() {
   );
 }
 
+// Sugestão de instalação do PWA aparece apenas na tela de login
+function InstallGate() {
+  const [location] = useLocation();
+  const isLoginPage = location === "/" || location === "/login";
+  return isLoginPage ? <InstallPWA /> : null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -92,7 +99,7 @@ function App() {
                 <AppHeader />
                 <Router />
                 <ProfileSheet />
-                <InstallPWA />
+                <InstallGate />
               </TooltipProvider>
             </ThemeProvider>
           </HeaderProvider>

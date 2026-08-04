@@ -44,7 +44,10 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
-const formatCurrency = (value: number) => currencyFormatter.format(value || 0);
+const formatCurrency = (value: number | string) => {
+  const n = typeof value === 'number' ? value : Number(value);
+  return currencyFormatter.format(Number.isFinite(n) ? n : 0);
+};
 
 const formatDateTime = (value: string) => {
   const parsed = new Date(value);
