@@ -11,7 +11,6 @@ import {
   MapPin,
   QrCode,
   ScanLine,
-  Smartphone,
   Trash2,
   Type,
   Upload,
@@ -51,8 +50,11 @@ interface CheckInResult {
   message: string;
   attendee?: {
     name: string;
-    email: string;
+    email?: string;
   };
+  scheduleName?: string;
+  checkInAtLabel?: string;
+  method?: string;
 }
 
 interface CheckInKpis {
@@ -123,33 +125,47 @@ const extractEventMeta = (payload: unknown) => {
   return { title, location };
 };
 
+// Lê a primeira chave presente e numérica (aceita 0, ao contrário de `||`).
+const pickNumber = (obj: Record<string, unknown> | undefined, keys: string[]): number | undefined => {
+  if (!obj) return undefined;
+  for (const key of keys) {
+    const value = obj[key];
+    if (value !== undefined && value !== null && Number.isFinite(Number(value))) {
+      return Number(value);
+    }
+  }
+  return undefined;
+};
+
 const normalizeKpis = (payload: unknown): CheckInKpis => {
   const root = isRecord(payload) ? payload : undefined;
   const data = root && isRecord(root.data) ? root.data : root;
 
+  // "Feitos" no escopo do agendamento ativo (nunca o total histórico de todos os agendamentos).
   const done =
-    asNumber(data?.done) ||
-    asNumber(data?.completed) ||
-    asNumber(data?.checkedIn) ||
-    asNumber(data?.checkedInCount) ||
-    asNumber(data?.totalCheckIns) ||
-    asNumber(data?.totalCheckedIn) ||
-    asNumber(data?.feitos);
+    pickNumber(data, [
+      'done',
+      'completed',
+      'checkedIn',
+      'checkedInCount',
+      'totalCheckInsNoAgendamento',
+      'totalCheckedIn',
+      'feitos',
+    ]) ?? 0;
 
-  const pendingFromPayload =
-    asNumber(data?.pending) ||
-    asNumber(data?.pendingCount) ||
-    asNumber(data?.totalPending) ||
-    asNumber(data?.pendentes);
-
+  // Total de inscritos individuais confirmados.
   const total =
-    asNumber(data?.total) ||
-    asNumber(data?.totalCount) ||
-    asNumber(data?.totalRegistrations) ||
-    asNumber(data?.totalInscricoes) ||
-    asNumber(data?.totalInscritos);
+    pickNumber(data, [
+      'totalInscritos',
+      'totalInscricoes',
+      'total',
+      'totalCount',
+      'totalRegistrations',
+    ]) ?? 0;
 
-  const pending = pendingFromPayload || Math.max(total - done, 0);
+  const pendingFromPayload = pickNumber(data, ['pending', 'pendingCount', 'totalPending', 'pendentes']);
+  const pending = pendingFromPayload ?? Math.max(total - done, 0);
+
   return { done, pending };
 };
 
@@ -249,8 +265,14 @@ const normalizeMessageForMatch = (value: string) =>
 const isRecentlyCheckedInMessage = (message: string) => {
   const normalized = normalizeMessageForMatch(message);
   return (
-    normalized.includes('check-in ja realizado recentemente') ||
-    normalized.includes('checkin ja realizado recentemente')
+    // Já fez check-in neste agendamento (nova mensagem, com nome/horário)
+    normalized.includes('ja fez check-in') ||
+    normalized.includes('ja fez checkin') ||
+    // Mensagens legadas / genéricas de duplicidade
+    normalized.includes('ja realizado neste agendamento') ||
+    normalized.includes('check-in ja realizado') ||
+    normalized.includes('checkin ja realizado') ||
+    normalized.includes('ja registrado')
   );
 };
 
@@ -1093,12 +1115,21 @@ export default function CheckIn() {
         eventIdOverride: options?.eventIdOverride,
         attendeeId: options?.attendeeId,
       });
-      const data = response.data as { message?: string; attendee?: { name: string; email: string } };
+      const data = response.data as {
+        message?: string;
+        attendee?: { name: string; email?: string };
+        scheduleName?: string;
+        checkInAtLabel?: string;
+        method?: string;
+      };
 
       setResult({
         success: true,
         message: data.message || 'Check-in realizado com sucesso!',
         attendee: data.attendee,
+        scheduleName: data.scheduleName,
+        checkInAtLabel: data.checkInAtLabel,
+        method: data.method,
       });
 
       await loadStats();
@@ -1108,10 +1139,12 @@ export default function CheckIn() {
 
       // Reset form after success
       setManualCode('');
+      setManualAttendees([]);
+      setSelectedManualAttendeeId('');
       setTimeout(() => {
         setResult(null);
         setMethod(null);
-      }, 3000);
+      }, 4000);
     } catch (err) {
       const shouldQueueOffline =
         !isOnline || (axios.isAxiosError(err) && !err.response && Boolean(hasOfflineCache));
@@ -1385,12 +1418,6 @@ export default function CheckIn() {
       return;
     }
 
-    if (method === 'nfc') {
-      stopQrReader();
-      void startNfcReader();
-      return;
-    }
-
     stopQrReader();
     stopNfcReader();
   }, [method]);
@@ -1407,16 +1434,18 @@ export default function CheckIn() {
       throw new Error('Evento invalido para listar inscritos.');
     }
 
-    const orderCode = manualCode.trim();
-    if (!orderCode) {
-      throw new Error('Informe o orderCode para listar os inscritos.');
+    const termo = manualCode.trim();
+    if (!termo) {
+      throw new Error('Informe o código de inscrição ou o e-mail do comprador.');
     }
 
-    const response = await api.get('/api/public/checkin/attendees', { params: { orderCode } });
+    const response = await api.get('/api/public/checkin/attendees', {
+      params: { query: termo, eventId },
+    });
 
-    const attendees = normalizeOrderAttendees(response.data, orderCode);
+    const attendees = normalizeOrderAttendees(response.data, termo);
     if (attendees.length === 0) {
-      throw new Error('Nenhum inscrito encontrado para este orderCode.');
+      throw new Error('Nenhum inscrito encontrado para este código ou e-mail.');
     }
 
     return attendees;
@@ -1424,7 +1453,7 @@ export default function CheckIn() {
 
   const handleLoadManualAttendees = async () => {
     if (!manualCode.trim()) {
-      setError('Informe o orderCode para listar os inscritos.');
+      setError('Informe o código de inscrição ou o e-mail do comprador.');
       return;
     }
     if (!isOnline) {
@@ -1593,13 +1622,34 @@ export default function CheckIn() {
             >
               <CheckCircle className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <p className="text-sm font-semibold" style={{ color: '#14532D' }}>{result.message}</p>
-              {result.attendee && (
-                <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
-                  {result.attendee.name}
-                </p>
+            <div className="min-w-0">
+              {result.attendee?.name ? (
+                <>
+                  <p className="text-base font-bold leading-tight" style={{ color: '#14532D' }}>
+                    {result.attendee.name}
+                  </p>
+                  <p className="text-xs font-semibold mt-0.5" style={{ color: '#16A34A' }}>
+                    Check-in confirmado
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm font-semibold" style={{ color: '#14532D' }}>{result.message}</p>
               )}
+              <div className="mt-1 space-y-0.5">
+                {result.attendee?.email && (
+                  <p className="text-xs" style={{ color: '#166534' }}>{result.attendee.email}</p>
+                )}
+                {result.scheduleName && (
+                  <p className="text-xs" style={{ color: '#166534' }}>
+                    Agendamento: {result.scheduleName}
+                  </p>
+                )}
+                {result.checkInAtLabel && (
+                  <p className="text-xs" style={{ color: '#166534' }}>
+                    Registrado em {result.checkInAtLabel}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1642,8 +1692,7 @@ export default function CheckIn() {
 
             {[
               { key: 'qrcode' as const, icon: <QrCode className="w-6 h-6" />, title: 'QR Code', desc: 'Escaneie o código QR do participante' },
-              { key: 'nfc'    as const, icon: <Smartphone className="w-6 h-6" />, title: 'NFC', desc: 'Aproxime o cartão NFC do dispositivo' },
-              { key: 'manual' as const, icon: <Type className="w-6 h-6" />, title: 'Manual', desc: 'Digite o código de inscrição' },
+              { key: 'manual' as const, icon: <Type className="w-6 h-6" />, title: 'Manual', desc: 'Código do pedido ou e-mail do comprador' },
             ].map(({ key, icon, title, desc }) => (
               <button
                 key={key}
@@ -1682,10 +1731,10 @@ export default function CheckIn() {
               </button>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#C9A84C' }}>
-                  {method === 'qrcode' ? 'QR Code' : method === 'nfc' ? 'NFC' : 'Manual'}
+                  {method === 'qrcode' ? 'QR Code' : 'Manual'}
                 </p>
                 <h2 className="text-lg font-extrabold leading-tight" style={{ color: '#0A1F3F' }}>
-                  {method === 'qrcode' ? 'Escanear código' : method === 'nfc' ? 'Ler tag NFC' : 'Inserir código'}
+                  {method === 'qrcode' ? 'Escanear código' : 'Inserir código ou e-mail'}
                 </h2>
               </div>
             </div>
@@ -1695,11 +1744,11 @@ export default function CheckIn() {
               <form onSubmit={handleManualSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#6B7280' }}>
-                    Código de inscrição
+                    Código de inscrição ou e-mail do comprador
                   </label>
                   <Input
                     type="text"
-                    placeholder="Digite o orderCode..."
+                    placeholder="Código do pedido ou e-mail do comprador..."
                     value={manualCode}
                     onChange={(e) => {
                       setManualCode(e.target.value);
@@ -1844,50 +1893,6 @@ export default function CheckIn() {
                     Leitura QR indisponível neste navegador/dispositivo.
                   </p>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() => setMethod('manual')}
-                  disabled={isLoading}
-                  className="w-full h-12 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
-                  style={{ backgroundColor: '#F0F2F5', color: '#1B4D8E', border: '1.5px solid #1B4D8E' }}
-                >
-                  Digitar código manualmente
-                </button>
-              </div>
-            )}
-
-            {/* ── NFC ── */}
-            {method === 'nfc' && (
-              <div className="space-y-4">
-                <div
-                  className="rounded-2xl flex flex-col items-center justify-center py-12 text-center"
-                  style={{ backgroundColor: '#EBF2FB' }}
-                >
-                  <div className="relative mb-4">
-                    <div
-                      className="absolute inset-0 rounded-full animate-ping opacity-25"
-                      style={{ backgroundColor: '#1B4D8E' }}
-                    />
-                    <div
-                      className="relative w-20 h-20 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: '#1B4D8E' }}
-                    >
-                      <Smartphone className="w-9 h-9 text-white" />
-                    </div>
-                  </div>
-                  <p className="text-sm font-semibold" style={{ color: '#0A1F3F' }}>
-                    {isNfcActive ? 'NFC ativo' : 'Aguardando NFC...'}
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: '#6B7280' }}>
-                    {scanStatus || 'Aproxime a credencial do participante'}
-                  </p>
-                  {!isNfcSupported && (
-                    <p className="text-xs mt-2 px-4" style={{ color: '#D97706' }}>
-                      NFC não suportado neste dispositivo.
-                    </p>
-                  )}
-                </div>
 
                 <button
                   type="button"

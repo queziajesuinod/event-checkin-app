@@ -108,8 +108,19 @@ export interface PaymentOption {
         interestRate: number;
         interestType?: 'percentage' | 'fixed';
       }>;
+  // Quando true, o evento absorve a taxa de parcelamento (não repassa ao cliente).
+  absorverTaxaParcelamento?: boolean;
   isActive: boolean;
 }
+
+// Taxa TOTAL da Cielo (%) por bandeira e parcela, usada no repasse ao cliente.
+export interface CieloBrandRate {
+  defaultPercent?: number;
+  minimumFee?: number;
+  installmentPercent?: Record<string, number>;
+}
+
+export type CieloBrandRates = Record<string, CieloBrandRate>;
 
 export interface CouponValidation {
   valido: boolean;
@@ -374,6 +385,23 @@ export const buscarFormasPagamento = async (eventId: string): Promise<PaymentOpt
   setCache(cacheKey, response.data);
   
   return response.data;
+};
+
+export const buscarTaxasCartao = async (): Promise<CieloBrandRates> => {
+  const cacheKey = 'cielo-brand-rates';
+  const cached = getCached<CieloBrandRates>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await api.get('/api/public/events/fee-config');
+    const rates = (response.data?.creditCardBrandRates || {}) as CieloBrandRates;
+    setCache(cacheKey, rates);
+    return rates;
+  } catch {
+    return {};
+  }
 };
 
 export default api;

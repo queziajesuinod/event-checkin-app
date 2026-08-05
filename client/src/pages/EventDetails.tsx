@@ -27,16 +27,19 @@ import {
   type Event,
   type EventBatch,
   type FormField,
+  buscarTaxasCartao,
   type PaymentOption,
+  type CieloBrandRates,
   type RegistrationResponse,
 } from '@/lib/eventsApi';
 import { maskCPForCNPJ, maskPhone, validateCPForCNPJ, validateEmail, removeNonDigits, maskCreditCard, maskCardExpiry, maskCVV } from '@/lib/masks';
 import { isBatchActiveNow } from '@/lib/eventUtils';
 import {
-  applyInstallmentInterest,
-  calculateInstallmentInterestAmount,
-  formatInstallmentInterest,
-  getInstallmentInterestRule,
+  applyBrandInstallmentInterest,
+  calculateBrandInstallmentInterestAmount,
+  formatBrandInstallmentInterest,
+  detectCardBrandKey,
+  getCieloInstallmentRate,
 } from '@/lib/installmentInterest';
 import { getCieloDeniedMessage } from '@/lib/paymentDenialReason';
 import { translatePaymentError } from '@/lib/paymentErrorMessages';
@@ -228,6 +231,7 @@ export default function EventDetails() {
   const [lotes, setLotes] = useState<EventBatch[]>([]);
   const [campos, setCampos] = useState<FormField[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<PaymentOption[]>([]);
+  const [taxasCartao, setTaxasCartao] = useState<CieloBrandRates>({});
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -486,6 +490,14 @@ export default function EventDetails() {
           console.error('Erro ao carregar formas de pagamento:', error);
           return [];
         }),
+
+      // Promise 5: Taxas Cielo por bandeira (para repasse do parcelamento)
+      buscarTaxasCartao()
+        .then(rates => {
+          setTaxasCartao(rates);
+          return rates;
+        })
+        .catch(() => ({})),
     ];
 
     try {
@@ -578,6 +590,12 @@ export default function EventDetails() {
     return Number(cupomValido.discountValue);
   };
 
+  // Bandeira detectada pelos dígitos do cartão (repasse exato por bandeira).
+  // Fallback 'visa' pré-visualiza o valor antes de o cartão ser digitado; ao
+  // digitar, refina para a bandeira real (que é a cobrada pelo servidor).
+  const bandeiraCartao = detectCardBrandKey(dadosPagamento.cardNumber || '');
+  const bandeiraParaCalculo = bandeiraCartao || 'visa';
+
   const calcularValorTotal = (installments = parcelas) => {
     const subtotal = calcularSubtotal();
     if (subtotal === 0) return 0;
@@ -586,14 +604,14 @@ export default function EventDetails() {
     let total = totalSemTaxas;
 
     // Em BALANCE_DUE os juros incidem apenas sobre o sinal, não sobre o total do evento.
-    // Fora do BALANCE_DUE, aplica juros normalmente sobre o total.
+    // Fora do BALANCE_DUE, aplica o repasse por bandeira sobre o total.
     if (
       formaPagamento &&
       installments > 1 &&
       evento?.registrationPaymentMode !== 'BALANCE_DUE'
     ) {
       const pagamento = findPaymentOption(formaPagamento);
-      total = applyInstallmentInterest(totalSemTaxas, pagamento, installments);
+      total = applyBrandInstallmentInterest(totalSemTaxas, pagamento, installments, taxasCartao, bandeiraParaCalculo);
     }
 
     return Math.max(0, total);
@@ -759,7 +777,7 @@ export default function EventDetails() {
 
       const pagamentoBase = isBalanceDue ? baseDepositoSemJuros : totalSemJuros;
       const taxaPagamento = selectedPaymentOption?.paymentType === 'credit_card'
-        ? calculateInstallmentInterestAmount(pagamentoBase, selectedPaymentOption, parcelas)
+        ? calculateBrandInstallmentInterestAmount(pagamentoBase, selectedPaymentOption, parcelas, taxasCartao, bandeiraParaCalculo)
         : 0;
       const pagamentoTotal = Number((pagamentoBase + taxaPagamento).toFixed(2));
       const resultado = await processarInscricao({
@@ -1064,7 +1082,7 @@ export default function EventDetails() {
 
   const depositoComJuros =
     isBalanceDue && selectedPaymentOption?.paymentType === 'credit_card' && parcelas > 1
-      ? applyInstallmentInterest(baseDepositoSemJuros, selectedPaymentOption, parcelas)
+      ? applyBrandInstallmentInterest(baseDepositoSemJuros, selectedPaymentOption, parcelas, taxasCartao, bandeiraParaCalculo)
       : baseDepositoSemJuros;
 
   const pagamentoAgora = isBalanceDue ? depositoComJuros : totalComTaxas;
@@ -1881,14 +1899,14 @@ export default function EventDetails() {
                               <SelectContent>
                                 {Array.from({ length: selectedPaymentOption?.maxInstallments || 1 }, (_, i) => i + 1).map((p) => {
                                   const baseCalculo = isBalanceDue ? baseDepositoSemJuros : subtotal - desconto;
-                                  const totalParcelado = applyInstallmentInterest(baseCalculo, selectedPaymentOption, p);
+                                  const totalParcelado = applyBrandInstallmentInterest(baseCalculo, selectedPaymentOption, p, taxasCartao, bandeiraParaCalculo);
                                   const valorParcela = totalParcelado / p;
-                                  const regraParcela = getInstallmentInterestRule(selectedPaymentOption, p);
-                                  const semTaxas = !selectedPaymentOption || regraParcela.interestRate <= 0 || p === 1;
+                                  const taxaParcela = getCieloInstallmentRate(taxasCartao, bandeiraParaCalculo, p);
+                                  const semTaxas = !selectedPaymentOption || selectedPaymentOption.absorverTaxaParcelamento || p === 1 || taxaParcela === null || taxaParcela <= 0;
                                   return (
                                     <SelectItem key={p} value={p.toString()}>
                                       {p}x de R$ {valorParcela.toFixed(2)}
-                                      {semTaxas ? ' sem taxas' : ` (${formatInstallmentInterest(regraParcela)})`}
+                                      {semTaxas ? ' sem taxas' : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, p)})`}
                                     </SelectItem>
                                   );
                                 })}
