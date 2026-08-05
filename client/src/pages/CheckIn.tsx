@@ -1434,10 +1434,13 @@ export default function CheckIn() {
       throw new Error('Evento invalido para listar inscritos.');
     }
 
-    const termo = manualCode.trim();
-    if (!termo) {
+    const termoBruto = manualCode.trim();
+    if (!termoBruto) {
       throw new Error('Informe o código de inscrição ou o e-mail do comprador.');
     }
+
+    // E-mails são comparados em minúsculas; códigos (REG-...) mantêm-se como estão.
+    const termo = termoBruto.includes('@') ? termoBruto.toLowerCase() : termoBruto;
 
     const response = await api.get('/api/public/checkin/attendees', {
       params: { query: termo, eventId },
