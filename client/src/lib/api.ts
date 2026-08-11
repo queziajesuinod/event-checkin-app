@@ -145,6 +145,47 @@ export interface VoluntariadoPublicPayload {
   voluntariados: VoluntariadoEntrada[];
 }
 
+export interface MembroPublicoResumo {
+  memberId: string;
+  fullName: string;
+  email: string;
+  cpf: string;
+  phone: string;
+  birthDate: string;
+}
+
+export interface MembroPublicoVinculo {
+  id: string;
+  areaVoluntariadoId: string;
+  campusId?: string | null;
+  ministerioId?: string | null;
+  status: string;
+}
+
+export interface BuscarMembroResponse {
+  exists: boolean;
+  member?: MembroPublicoResumo;
+  voluntariados?: MembroPublicoVinculo[];
+}
+
+export interface SalvarPessoaPayload {
+  fullName: string;
+  preferredName?: string;
+  email: string;
+  cpf: string;
+  phone: string;
+  birthDate: string;
+}
+
+export interface AdicionarVinculoPayload {
+  memberId: string;
+  areaVoluntariadoId: string;
+  dataInicio: string;
+  campusId?: string;
+  ministerioId?: string;
+  observacao?: string;
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -203,6 +244,21 @@ export const voluntariadoPublicAPI = {
     ),
   cadastrar: (payload: VoluntariadoPublicPayload) =>
     publicApi.post("/api/public/voluntariado", payload),
+  // Etapa 0: busca membro existente por e-mail/CPF (pré-preenche)
+  buscarMembro: (params: { email?: string; cpf?: string }) =>
+    publicApi.get<BuscarMembroResponse>("/api/public/voluntariado/membro", { params }),
+  // Etapa 1: cria/atualiza a pessoa e retorna o memberId
+  salvarPessoa: (payload: SalvarPessoaPayload) =>
+    publicApi.post<{ memberId: string; mensagem?: string }>(
+      "/api/public/voluntariado/pessoa",
+      payload,
+    ),
+  // Etapa 2: adiciona uma área de voluntariado por vez
+  adicionarVinculo: (payload: AdicionarVinculoPayload) =>
+    publicApi.post<{ voluntariadoId: string; area: string; status: string; jaExistia?: boolean; mensagem?: string }>(
+      "/api/public/voluntariado/vinculo",
+      payload,
+    ),
 };
 
 const checkInAPI = {
