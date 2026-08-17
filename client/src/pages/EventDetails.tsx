@@ -242,6 +242,8 @@ export default function EventDetails() {
   // Estado do formulário
   const [cupomCodigo, setCupomCodigo] = useState('');
   const [cupomValido, setCupomValido] = useState<any>(null);
+  // Desconto calculado no servidor (usado para fixed_price, que nao da pra recalcular no front).
+  const [cupomDescontoServidor, setCupomDescontoServidor] = useState<number>(0);
   const [cupomFormasPermitidas, setCupomFormasPermitidas] = useState<string[] | null>(null);
   const [validandoCupom, setValidandoCupom] = useState(false);
   const [dadosComprador, setDadosComprador] = useState<Record<string, any>>({});
@@ -542,6 +544,7 @@ export default function EventDetails() {
       });
       if (resultado.valido) {
         setCupomValido(resultado.coupon);
+        setCupomDescontoServidor(Number(resultado.desconto) || 0);
         const permitidas = resultado.allowedPaymentTypes?.length ? resultado.allowedPaymentTypes : null;
         setCupomFormasPermitidas(permitidas);
         if (permitidas && formaPagamento) {
@@ -575,6 +578,22 @@ export default function EventDetails() {
     }
   };
 
+  // Assinatura da composicao de lotes (setores/qtd). Se mudar apos validar, um cupom
+  // fixed_price fica obsoleto (o desconto depende dos setores), entao forcamos revalidar.
+  const composicaoLotes = inscritos.map((i) => i.batchId || '').join('|');
+  const composicaoLotesRef = useRef(composicaoLotes);
+  useEffect(() => {
+    if (composicaoLotesRef.current !== composicaoLotes) {
+      composicaoLotesRef.current = composicaoLotes;
+      if (cupomValido?.discountType === 'fixed_price') {
+        setCupomValido(null);
+        setCupomFormasPermitidas(null);
+        setCupomDescontoServidor(0);
+        toast.info('Cupom removido: os ingressos mudaram, valide o cupom novamente.');
+      }
+    }
+  }, [composicaoLotes, cupomValido]);
+
   const calcularSubtotal = () =>
     inscritos.reduce((sum, inscrito) => {
       if (!inscrito.batchId) return sum;
@@ -584,6 +603,11 @@ export default function EventDetails() {
 
   const calcularDesconto = (subtotal: number) => {
     if (!cupomValido) return 0;
+    // fixed_price crava preco final por setor: o desconto vem calculado do servidor
+    // (nao da pra recalcular no front sem a tabela de precos por setor).
+    if (cupomValido.discountType === 'fixed_price') {
+      return Math.min(subtotal, Math.max(0, cupomDescontoServidor));
+    }
     if (cupomValido.discountType === 'percentage') {
       return subtotal * (Number(cupomValido.discountValue) / 100);
     }
@@ -2010,7 +2034,9 @@ export default function EventDetails() {
                           {cupomValido && (
                             <div className="flex items-center gap-1.5 text-green-700 text-xs font-medium">
                               <Check className="h-3.5 w-3.5" />
-                              Desconto: {cupomValido.discountType === 'percentage' ? `${cupomValido.discountValue}%` : `R$ ${Number(cupomValido.discountValue).toFixed(2)}`}
+                              {cupomValido.discountType === 'fixed_price'
+                                ? 'Preço especial aplicado por setor'
+                                : `Desconto: ${cupomValido.discountType === 'percentage' ? `${cupomValido.discountValue}%` : `R$ ${Number(cupomValido.discountValue).toFixed(2)}`}`}
                             </div>
                           )}
                         </div>

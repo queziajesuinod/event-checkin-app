@@ -126,9 +126,15 @@ export interface CouponValidation {
   valido: boolean;
   coupon?: {
     code: string;
-    discountType: 'percentage' | 'fixed';
+    discountType: 'percentage' | 'fixed' | 'fixed_price';
     discountValue: number;
+    // Presente apenas em fixed_price: preco final por setor (ex: { FRENTE: 220 }).
+    sectorPrices?: Record<string, number> | null;
   };
+  // Calculados no servidor (autoritativos). Para fixed_price o cliente deve usar
+  // estes valores em vez de recalcular localmente.
+  desconto?: number;
+  precoFinal?: number;
   allowedPaymentTypes?: string[] | null;
   message?: string;
 }
