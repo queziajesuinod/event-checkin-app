@@ -21,6 +21,7 @@ import {
   listarLotesPublicos,
   listarCamposFormulario,
   validarCupom,
+  validarRegrasInscricao,
   processarInscricao,
   buscarFormasPagamento,
   consultarInscricao,
@@ -235,6 +236,9 @@ export default function EventDetails() {
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // Pré-checagem das regras de bloqueio no "Continuar com Pagamento" (chamada async).
+  const [validandoRegras, setValidandoRegras] = useState(false);
+  const validandoRegrasRef = useRef(false);
   // Trava síncrona contra duplo-clique (o setSubmitting é assíncrono e não desabilita
   // o botão a tempo em internet lenta).
   const submittingRef = useRef(false);
@@ -768,7 +772,8 @@ export default function EventDetails() {
     return true;
   };
 
-  const avancarParaPagamento = () => {
+  const avancarParaPagamento = async () => {
+    if (validandoRegrasRef.current) return; // trava contra duplo-clique
     if (!hasLotAvailable) {
       toast.error('Inscrições encerradas para este evento.');
       return;
@@ -805,6 +810,50 @@ export default function EventDetails() {
         toast.error('Salve todos os inscritos antes de continuar');
         return;
       }
+    }
+
+    // 4) Regras de bloqueio do backend (idade mínima, estado civil, limite por
+    //    CPF, etc.). Pré-checagem que NÃO cria inscrição — roda aqui, antes do
+    //    pagamento. O comprador ainda não foi preenchido, então validamos só os
+    //    inscritos (scope 'attendee'); as regras do comprador são checadas no
+    //    envio final.
+    try {
+      validandoRegrasRef.current = true;
+      setValidandoRegras(true);
+
+      const resultado = await validarRegrasInscricao(eventId, {
+        scope: 'attendee',
+        attendeesData: inscritos.map((i) => ({ data: i.dados })),
+      });
+
+      if (!resultado.ok) {
+        const pendencia =
+          resultado.errors?.find((e) => e.scope === 'attendee') ??
+          resultado.errors?.[0];
+
+        if (pendencia) {
+          if (typeof pendencia.index === 'number' && inscritos[pendencia.index]) {
+            setInscritoAbertoId(inscritos[pendencia.index].id);
+          }
+          const prefixo =
+            typeof pendencia.index === 'number' && inscritos.length > 1
+              ? `Inscrito ${pendencia.index + 1}: `
+              : '';
+          toast.error(`${prefixo}${pendencia.message}`);
+        } else {
+          toast.error('Há uma regra que impede a inscrição. Revise os dados.');
+        }
+        return;
+      }
+    } catch (error) {
+      // Falha de rede/servidor: não deixamos passar para o pagamento sem a
+      // checagem das regras.
+      console.error('Erro ao validar regras de inscrição:', error);
+      toast.error('Não foi possível validar as regras de inscrição. Tente novamente.');
+      return;
+    } finally {
+      validandoRegrasRef.current = false;
+      setValidandoRegras(false);
     }
 
     // Os dados do comprador são preenchidos na etapa de pagamento; a validação
@@ -1831,10 +1880,14 @@ export default function EventDetails() {
                     size="lg"
                     className="w-full h-11 font-semibold"
                     onClick={avancarParaPagamento}
-                    disabled={!hasLotAvailable}
-                    style={accentButtonStyle(hasLotAvailable)}
+                    disabled={!hasLotAvailable || validandoRegras}
+                    style={accentButtonStyle(hasLotAvailable && !validandoRegras)}
                   >
-                    {!hasLotAvailable ? 'Inscrições encerradas' : 'Continuar com Pagamento →'}
+                    {!hasLotAvailable
+                      ? 'Inscrições encerradas'
+                      : validandoRegras
+                      ? 'Validando...'
+                      : 'Continuar com Pagamento →'}
                   </Button>
                   <button
                     type="button"

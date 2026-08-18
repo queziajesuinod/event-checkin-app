@@ -338,6 +338,38 @@ export const validarCupom = async (
   return response.data;
 };
 
+// Pré-checagem das regras de inscrição do evento (regras de bloqueio de negócio,
+// ex.: idade mínima, estado civil, limite por CPF). NÃO cria inscrição — serve
+// para bloquear o avanço para o pagamento quando há pendência de regra.
+// Envie só o que quer validar (attendeesData e/ou buyerData) ou force com "scope".
+export interface RegistrationRuleError {
+  scope: 'buyer' | 'attendee';
+  index?: number;
+  message: string;
+}
+
+export interface RegistrationRulesValidation {
+  ok: boolean;
+  errors?: RegistrationRuleError[];
+}
+
+export interface RegistrationRulesValidateRequest {
+  buyerData?: Record<string, any>;
+  attendeesData?: Array<{ data: Record<string, any> }>;
+  scope?: 'all' | 'buyer' | 'attendee';
+}
+
+export const validarRegrasInscricao = async (
+  eventId: string,
+  payload: RegistrationRulesValidateRequest
+): Promise<RegistrationRulesValidation> => {
+  const response = await api.post(
+    `/api/public/events/${eventId}/registration-rules/validate`,
+    payload
+  );
+  return response.data;
+};
+
 // Verificar disponibilidade de lote
 export const verificarDisponibilidade = async (
   batchId: string,
