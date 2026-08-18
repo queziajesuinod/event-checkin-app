@@ -401,16 +401,62 @@ export default function EventDetails() {
     setInscritos(prev => prev.filter((i) => i.id !== id));
   };
 
-  const salvarInscrito = (id: string) => {
-    const inscrito = inscritos.find((i) => i.id === id);
-    if (!inscrito) return;
+  const campoPreenchido = (valor: unknown): boolean => {
+    if (Array.isArray(valor)) return valor.length > 0;
+    return valor !== undefined && valor !== null && String(valor).trim() !== '';
+  };
 
-    // Validar campos obrigatórios
+  // Valida os dados de um inscrito: campos obrigatórios preenchidos + formato de
+  // e-mail, CPF/CNPJ e telefone. Retorna a mensagem da primeira pendência
+  // encontrada, ou null se estiver tudo certo. Usada tanto ao salvar quanto no
+  // bloqueio antes de avançar para o pagamento — assim nenhuma pendência de dados
+  // do inscrito passa para a etapa de pagamento.
+  const validarDadosInscrito = (
+    inscrito: { dados: Record<string, any> },
+    index: number
+  ): string | null => {
+    const prefixo = inscritos.length > 1 ? `Inscrito ${index + 1}: ` : '';
+
     for (const campo of camposInscrito) {
-      if (campo.isRequired && !inscrito.dados[campo.fieldName]) {
-        toast.error(`Campo obrigatório: ${campo.label}`);
-        return;
+      const valor = inscrito.dados[campo.fieldName];
+
+      if (campo.isRequired && !campoPreenchido(valor)) {
+        return `${prefixo}preencha o campo obrigatório "${campo.label}"`;
       }
+
+      // Formato só é validado quando há valor (campos opcionais em branco passam).
+      if (!campoPreenchido(valor)) continue;
+
+      const texto = String(valor);
+
+      if (campo.fieldType === 'email' && !validateEmail(texto)) {
+        return `${prefixo}e-mail inválido no campo "${campo.label}"`;
+      }
+
+      if (isCpfField(campo) && !validateCPForCNPJ(texto)) {
+        const tipo = removeNonDigits(texto).length > 11 ? 'CNPJ' : 'CPF';
+        return `${prefixo}${tipo} inválido no campo "${campo.label}"`;
+      }
+
+      if (isWhatsAppField(campo)) {
+        const digitos = removeNonDigits(texto);
+        if (digitos.length < 10 || digitos.length > 11) {
+          return `${prefixo}telefone inválido no campo "${campo.label}"`;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const salvarInscrito = (id: string) => {
+    const index = inscritos.findIndex((i) => i.id === id);
+    if (index === -1) return;
+
+    const erro = validarDadosInscrito(inscritos[index], index);
+    if (erro) {
+      toast.error(erro);
+      return;
     }
 
     // Marcar como salvo
@@ -727,20 +773,42 @@ export default function EventDetails() {
       toast.error('Inscrições encerradas para este evento.');
       return;
     }
+
+    // Regras de bloqueio: nenhum inscrito pode avançar para o pagamento com
+    // pendência. As checagens abrem o inscrito problemático no acordeão e
+    // interrompem o avanço na primeira pendência encontrada.
+
+    // 1) Todos os inscritos precisam de um lote selecionado.
+    const inscritoSemLote = inscritos.find((i) => !i.batchId);
+    if (inscritoSemLote) {
+      setInscritoAbertoId(inscritoSemLote.id);
+      toast.error('Selecione um lote para todos os inscritos');
+      return;
+    }
+
     if (camposInscrito.length > 0) {
-      const inscritosSemLote = inscritos.filter((i) => !i.batchId);
-      if (inscritosSemLote.length > 0) {
-        toast.error('Selecione um lote para todos os inscritos');
-        return;
+      // 2) Dados de cada inscrito válidos (obrigatórios + formato). Feito aqui,
+      //    antes do pagamento, e não só no envio final.
+      for (let i = 0; i < inscritos.length; i++) {
+        const erro = validarDadosInscrito(inscritos[i], i);
+        if (erro) {
+          setInscritoAbertoId(inscritos[i].id);
+          toast.error(erro);
+          return;
+        }
       }
-      const inscritosNaoSalvos = inscritos.filter((i) => !i.salvo);
-      if (inscritosNaoSalvos.length > 0) {
-        toast.error(`Salve todos os inscritos antes de continuar`);
+
+      // 3) Todos precisam estar salvos (dados confirmados pelo usuário).
+      const inscritoNaoSalvo = inscritos.find((i) => !i.salvo);
+      if (inscritoNaoSalvo) {
+        setInscritoAbertoId(inscritoNaoSalvo.id);
+        toast.error('Salve todos os inscritos antes de continuar');
         return;
       }
     }
-    // Os dados do comprador agora são preenchidos na etapa de pagamento;
-    // a validação deles ocorre no envio final (validarFormulario).
+
+    // Os dados do comprador são preenchidos na etapa de pagamento; a validação
+    // deles (e a validação do pagamento) ocorre no envio final (validarFormulario).
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
