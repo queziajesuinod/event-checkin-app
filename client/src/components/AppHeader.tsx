@@ -10,11 +10,29 @@ import { useLocation } from 'wouter';
 const LOGO =
   'https://images.squarespace-cdn.com/content/v1/5bc9186e34c4e27773d92870/1546175613378-UHI78Z3KGSEOFFJEAP0B/logo-site.png';
 
+// Rotas públicas (sem ProtectedRoute em App.tsx). Nelas o topo com avatar/logout
+// nunca aparece, mesmo com o usuário autenticado — a página fica idêntica para
+// quem está logado e para o visitante anônimo. Mantenha em sincronia com App.tsx.
+const PUBLIC_ROUTE_PATTERNS: RegExp[] = [
+  /^\/$/,
+  /^\/login$/,
+  /^\/eventos$/,
+  /^\/eventos\/[^/]+$/,
+  /^\/inscricao\/[^/]+$/,
+  /^\/inscricao\/[^/]+\/visualizacao$/,
+  /^\/inscricao\/[^/]+\/sucesso$/,
+  /^\/pix-confirmacao$/,
+  /^\/ticket\/[^/]+$/,
+  /^\/voluntariado(?:\/.*)?$/,
+  /^\/cadastro-voluntariado$/,
+  /^\/404$/,
+];
+
 export default function AppHeader() {
   const { user, logout } = useAuth();
   const { config } = useHeader();
   const { openProfile } = useProfileSheet();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
 
   /* ── busca foto do perfil uma vez ── */
@@ -27,8 +45,10 @@ export default function AppHeader() {
       .catch(() => {});
   }, [user?.accessToken]);
 
-  /* ── não renderiza nas páginas que pedem esconder (login, public) ── */
-  if (config.hide || !user) return null;
+  /* ── não renderiza nas páginas que pedem esconder, nas rotas públicas
+     (mesmo autenticado) ou quando não há usuário ── */
+  const isPublicRoute = PUBLIC_ROUTE_PATTERNS.some((re) => re.test(location));
+  if (config.hide || isPublicRoute || !user) return null;
 
   const initial = (user.name ?? 'U')[0].toUpperCase();
 
