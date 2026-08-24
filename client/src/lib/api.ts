@@ -223,6 +223,7 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: (email: string, password: string) => api.post<LoginResponse>("/auth/login", { email, password }),
+  forgotPassword: (email: string) => api.post<{ message: string }>("/auth/forgot-password", { email }),
   logout: () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");

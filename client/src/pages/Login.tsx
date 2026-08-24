@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { authAPI } from '@/lib/api';
 import { AlertCircle, Lock, Loader2, Mail, Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
@@ -13,6 +14,8 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
   );
@@ -92,6 +95,26 @@ export default function Login() {
       setError(err instanceof Error ? err.message : 'Falha no login. Verifique suas credenciais.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    setForgotMsg('');
+    const emailTrim = email.trim();
+    if (!emailTrim) {
+      setError('Informe seu e-mail para receber uma nova senha.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const { data } = await authAPI.forgotPassword(emailTrim);
+      setForgotMsg(data?.message || 'Se o e-mail estiver cadastrado, enviaremos uma nova senha em instantes.');
+    } catch {
+      // Mensagem genérica mesmo em erro (não revela se o e-mail existe)
+      setForgotMsg('Se o e-mail estiver cadastrado, enviaremos uma nova senha em instantes.');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -258,6 +281,17 @@ export default function Login() {
             </div>
           )}
 
+          {/* ── Mensagem de recuperação de senha ── */}
+          {forgotMsg && (
+            <div
+              className="flex items-start gap-2.5 px-4 py-3 rounded-2xl text-sm"
+              style={{ backgroundColor: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)' }}
+            >
+              <Mail className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#4ADE80' }} />
+              <p style={{ color: '#4ADE80' }}>{forgotMsg}</p>
+            </div>
+          )}
+
           {/* ── Form e-mail + senha ── */}
           <form onSubmit={handleSubmit} className="space-y-3">
             {/* Campo e-mail */}
@@ -365,6 +399,17 @@ export default function Login() {
               ) : (
                 'Tentar mesmo assim'
               )}
+            </button>
+
+            {/* Esqueci minha senha */}
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={forgotLoading || isLoading}
+              className="w-full text-center text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50 mt-1"
+              style={{ color: 'rgba(255,255,255,0.6)', background: 'transparent' }}
+            >
+              {forgotLoading ? 'Enviando...' : 'Esqueci minha senha'}
             </button>
           </form>
 
