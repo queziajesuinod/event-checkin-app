@@ -16,6 +16,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [forgotMsg, setForgotMsg] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [showRecover, setShowRecover] = useState(false);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
   );
@@ -207,7 +208,7 @@ export default function Login() {
         <div className="space-y-3 max-w-sm mx-auto">
 
           {/* ── Bloco offline ── aparece quando sem conexão */}
-          {!isOnline && (
+          {!isOnline && !showRecover && (
             <div className="animate-in fade-in slide-in-from-top-3 duration-400 space-y-3">
               {hasOfflineSession ? (
                 /* Sessão disponível → botão principal destacado */
@@ -292,7 +293,8 @@ export default function Login() {
             </div>
           )}
 
-          {/* ── Form e-mail + senha ── */}
+          {/* ── Form e-mail + senha (modo login) ── */}
+          {!showRecover && (
           <form onSubmit={handleSubmit} className="space-y-3">
             {/* Campo e-mail */}
             <div className="relative">
@@ -401,20 +403,75 @@ export default function Login() {
               )}
             </button>
 
-            {/* Esqueci minha senha */}
+            {/* Esqueci minha senha — abre a view de recuperação */}
             <button
               type="button"
-              onClick={handleForgotPassword}
-              disabled={forgotLoading || isLoading}
+              onClick={() => { setError(''); setForgotMsg(''); setShowRecover(true); }}
+              disabled={isLoading}
               className="w-full text-center text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50 mt-1"
               style={{ color: 'rgba(255,255,255,0.6)', background: 'transparent' }}
             >
-              {forgotLoading ? 'Enviando...' : 'Esqueci minha senha'}
+              Esqueci minha senha
             </button>
           </form>
+          )}
+
+          {/* ── Modo recuperação de senha ── */}
+          {showRecover && (
+            <div className="space-y-3">
+              <p className="text-sm text-center" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                Informe seu e-mail e enviaremos uma nova senha.
+              </p>
+              <div className="relative">
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                  style={{ color: email ? 'rgba(255,255,255,0.35)' : '#0A1F3F' }}
+                />
+                <input
+                  type="email"
+                  placeholder="E-mail"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={forgotLoading}
+                  autoComplete="email"
+                  className="w-full h-14 pl-11 pr-4 rounded-2xl text-sm outline-none transition-all duration-200 disabled:opacity-60 placeholder:text-[#0A1F3F]/50"
+                  style={{
+                    backgroundColor: email ? 'rgba(255,255,255,0.08)' : '#ffffff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: email ? '#ffffff' : '#0A1F3F',
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={forgotLoading}
+                className="w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-70"
+                style={{ backgroundColor: '#C9A84C', color: '#0A1F3F' }}
+              >
+                {forgotLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar nova senha'
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setForgotMsg(''); setShowRecover(false); }}
+                disabled={forgotLoading}
+                className="w-full text-center text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ color: 'rgba(255,255,255,0.6)', background: 'transparent' }}
+              >
+                Voltar ao login
+              </button>
+            </div>
+          )}
 
           {/* Sessão salva — só aparece quando online */}
-          {isOnline && hasOfflineSession && (
+          {isOnline && hasOfflineSession && !showRecover && (
             <button
               type="button"
               onClick={handleOfflineLogin}
