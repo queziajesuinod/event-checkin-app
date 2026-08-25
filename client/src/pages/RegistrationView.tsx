@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
-import { ArrowLeft, CheckCircle2, CreditCard, Loader2, QrCode, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, CreditCard, Loader2, QrCode, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { getFriendlyPaymentError } from '@/lib/paymentErrorMessages';
 import { Badge } from '@/components/ui/badge';
@@ -128,6 +128,7 @@ export default function RegistrationView() {
   const [registration, setRegistration] = useState<RegistrationDetails | null>(null);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'pix' | 'credit_card'>('pix');
+  const [amountMode, setAmountMode] = useState<'integral' | 'outro'>('integral');
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [selectedPaymentOptionId, setSelectedPaymentOptionId] = useState('');
   const [loadingPaymentOptions, setLoadingPaymentOptions] = useState(false);
@@ -387,6 +388,39 @@ export default function RegistrationView() {
   const installmentOptions = Array.from({ length: maxInstallments }, (_, index) => index + 1);
   const selectedInstallmentInterest = getInstallmentInterestRule(selectedPaymentOption, installments);
   const interestDescription = formatInstallmentInterest(selectedInstallmentInterest);
+
+  // Métodos disponíveis (para os botões PIX / Cartão)
+  const pixAvailable = paymentOptions.some(
+    (option) => option.paymentType === 'pix' && option.eventId === eventIdForRegistration
+  );
+  const cardAvailable = paymentOptions.some(
+    (option) => option.paymentType === 'credit_card' && option.eventId === eventIdForRegistration
+  );
+
+  // Se o método selecionado deixar de existir, cai para o primeiro disponível
+  useEffect(() => {
+    if (method === 'pix' && !pixAvailable && cardAvailable) {
+      setMethod('credit_card');
+    } else if (method === 'credit_card' && !cardAvailable && pixAvailable) {
+      setMethod('pix');
+    }
+  }, [method, pixAvailable, cardAvailable]);
+
+  // Base para calcular o valor da parcela exibido no seletor
+  const amountBaseValue = Number((amount || '').replace(',', '.')) || 0;
+
+  // Pré-visualização do cartão
+  const cardNumberDisplay = cardData.cardNumber?.trim() || '•••• •••• •••• ••••';
+  const cardHolderDisplay = cardData.cardHolder?.trim() || 'NOME COMPLETO';
+  const cardExpDisplay = cardData.expirationDate?.trim() || 'MM/AAAA';
+  const cardCvvDisplay = cardData.securityCode?.trim() || '•••';
+
+  // No modo "valor integral" mantém o campo sincronizado com o saldo restante
+  useEffect(() => {
+    if (amountMode === 'integral') {
+      setAmount(formatNumberInput(remainingSemJuros));
+    }
+  }, [amountMode, remainingSemJuros]);
 
   useEffect(() => {
     if (method === 'credit_card' && installments > maxInstallments) {
@@ -707,84 +741,68 @@ export default function RegistrationView() {
         )}
 
         {canPay && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-1">
-              <CreditCard className="h-4 w-4 text-slate-400" />
-              Realizar novo pagamento
-            </h2>
-            <p className="text-xs text-slate-400 mb-5">
-              Informe o valor que deseja pagar agora. O saldo será atualizado automaticamente.
-            </p>
-              <form onSubmit={handleSubmitPayment} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-[5px]">
-                    <Label htmlFor="payment-amount">Valor do pagamento</Label>
-                    <Input
-                      id="payment-amount"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      max={remainingSemJuros}
-                      value={amount}
-                      onChange={(event) => setAmount(event.target.value)}
-                      placeholder="0,00"
-                    />
-                    {method === 'pix' && registration && (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          onClick={() => setAmount(formatNumberInput(remainingSemJuros))}
-                        >
-                          Pagar total agora (R$ {formatCurrency(remainingSemJuros)})
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          onClick={() => setAmount('')}
-                        >
-                          Registrar outra parcela
-                        </Button>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Saldo restante: {formatCurrency(remainingSemJuros)}
-                    </p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-slate-400" />
+                Forma de pagamento
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Escolha como pagar e o valor. O saldo será atualizado automaticamente.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmitPayment} className="space-y-5">
+              {/* Método de pagamento — botões PIX / Cartão */}
+              {loadingPaymentOptions ? (
+                <p className="text-sm text-slate-400">Carregando formas de pagamento...</p>
+              ) : !pixAvailable && !cardAvailable ? (
+                <p className="text-sm text-destructive">Nenhuma forma de pagamento disponível.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { key: 'pix' as const, label: 'PIX', Icon: QrCode, available: pixAvailable },
+                      { key: 'credit_card' as const, label: 'Cartão', Icon: CreditCard, available: cardAvailable },
+                    ]
+                      .filter((m) => m.available)
+                      .map(({ key, label, Icon }) => {
+                        const isSelected = method === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setMethod(key)}
+                            className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3.5 text-sm font-medium transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 text-primary'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                            {label}
+                            {isSelected && <Check className="h-3.5 w-3.5 ml-1" />}
+                          </button>
+                        );
+                      })}
                   </div>
-                  <div className="space-y-[5px]">
-                    <Label>Método de pagamento</Label>
-                    <Select value={method} onValueChange={(value) => setMethod(value as 'pix' | 'credit_card')}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pix">PIX</SelectItem>
-                        <SelectItem value="credit_card">Cartão</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="space-y-1">
-                      <Label htmlFor="payment-option">Opção ativa</Label>
+
+                  {/* Seletor de opção ativa (só quando há mais de uma para o método) */}
+                  {optionsForMethod.length > 1 && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="payment-option" className="text-sm font-medium text-slate-700">
+                        Opção ativa
+                      </Label>
                       <Select
                         value={selectedPaymentOptionId}
                         onValueChange={(value) => setSelectedPaymentOptionId(value)}
-                        disabled={loadingPaymentOptions || !optionsForMethod.length}
                       >
-                        <SelectTrigger id="payment-option">
-                          <SelectValue
-                            placeholder={
-                              loadingPaymentOptions
-                                ? 'Carregando opções...'
-                                : optionsForMethod.length
-                                ? 'Selecione uma opção'
-                                : 'Nenhuma opção disponível'
-                            }
-                          />
+                        <SelectTrigger id="payment-option" className="w-full bg-white border-slate-400 focus:border-primary">
+                          <SelectValue placeholder="Selecione uma opção" />
                         </SelectTrigger>
                         <SelectContent>
                           {optionsForMethod.map((option) => {
-                            const methodLabel = option.paymentType === 'pix' ? 'PIX' : 'Cartão';
+                            const optionLabel = option.paymentType === 'pix' ? 'PIX' : 'Cartão';
                             const hasInstallmentRates = Array.isArray(option.installmentInterestRates)
                               ? option.installmentInterestRates.length > 0
                               : Boolean(
@@ -796,133 +814,240 @@ export default function RegistrationView() {
                               : formatInstallmentInterest(getInstallmentInterestRule(option, 2));
                             return (
                               <SelectItem key={option.id} value={String(option.id)}>
-                                {methodLabel} — {interestText}
+                                {optionLabel} — {interestText}
                               </SelectItem>
                             );
                           })}
                         </SelectContent>
                       </Select>
-                      {!loadingPaymentOptions && !optionsForMethod.length && (
-                        <p className="text-xs text-destructive">
-                          Nenhuma forma ativa encontrada para {method === 'pix' ? 'PIX' : 'Cartão'}.
-                        </p>
+                    </div>
+                  )}
+
+                  {!optionsForMethod.length && (
+                    <p className="text-xs text-destructive">
+                      Nenhuma forma ativa encontrada para {method === 'pix' ? 'PIX' : 'Cartão'}.
+                    </p>
+                  )}
+
+                  {/* Quanto pagar agora — valor integral ou outro valor */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Quanto pagar agora?</p>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAmountMode('integral')}
+                        className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
+                          amountMode === 'integral' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-white'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-medium text-slate-800">Valor integral</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Quite todo o saldo restante</p>
+                        </div>
+                        <span className="ml-4 shrink-0 font-bold text-primary">{formatCurrency(remainingSemJuros)}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAmountMode('outro');
+                          setAmount('');
+                        }}
+                        className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
+                          amountMode === 'outro' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-white'
+                        }`}
+                      >
+                        <p className="font-medium text-slate-800">Outro valor</p>
+                      </button>
+                      {amountMode === 'outro' && (
+                        <div className="pt-1">
+                          <Input
+                            id="payment-amount"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            max={remainingSemJuros}
+                            value={amount}
+                            onChange={(event) => setAmount(event.target.value)}
+                            placeholder={`Máx. ${formatCurrency(remainingSemJuros)}`}
+                          />
+                          <p className="text-xs text-slate-400 mt-1">
+                            Saldo restante: <span className="font-semibold">{formatCurrency(remainingSemJuros)}</span>
+                          </p>
+                        </div>
                       )}
-                </div>
-              </div>
-            </div>
-            {showCreditCardFields && selectedPaymentOption && (
-              <div className="space-y-6 pt-4 border-t">
-                {maxInstallments > 1 && (
-                  <div className="space-y-[5px]">
-                    <Label>Número de parcelas</Label>
-                    <Select value={installments.toString()} onValueChange={(value) => setInstallments(Number(value))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Quantidade de parcelas" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {installmentOptions.map((option) => (
-                          <SelectItem key={option} value={option.toString()}>
-                            {option}x
-                            {option > 1
-                              ? ` (${formatInstallmentInterest(getInstallmentInterestRule(selectedPaymentOption, option))})`
-                              : ' sem taxas'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Taxas do plano: {interestDescription}</p>
-                  </div>
-                )}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium">Dados do Cartão</h4>
-                    <span className="text-xs text-muted-foreground">
-                      {selectedInstallmentInterest.interestRate > 0 ? 'Pagamento com taxas' : 'Sem taxas'}
-                    </span>
-                  </div>
-                  <div>
-                    <Label>Número do Cartão</Label>
-                    <Input
-                      placeholder="0000 0000 0000 0000"
-                      value={cardData.cardNumber}
-                      onChange={(event) => {
-                        const masked = maskCreditCard(event.target.value);
-                        setCardData((prev) => ({ ...prev, cardNumber: masked }));
-                      }}
-                      maxLength={19}
-                    />
-                  </div>
-                  <div>
-                    <Label>Nome no Cartão</Label>
-                    <Input
-                      placeholder="NOME COMPLETO"
-                      value={cardData.cardHolder}
-                      onChange={(event) =>
-                        setCardData((prev) => ({ ...prev, cardHolder: event.target.value.toUpperCase() }))
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Validade (MM/AAAA)</Label>
-                      <Input
-                        placeholder="MM/AAAA"
-                        value={cardData.expirationDate}
-                        onChange={(event) => {
-                          const masked = maskCardExpiry(event.target.value);
-                          setCardData((prev) => ({ ...prev, expirationDate: masked }));
-                        }}
-                        maxLength={7}
-                      />
-                    </div>
-                    <div>
-                      <Label>CVV</Label>
-                      <Input
-                        placeholder="123"
-                        type="password"
-                        value={cardData.securityCode}
-                        onChange={(event) => {
-                          const masked = maskCVV(event.target.value);
-                          setCardData((prev) => ({ ...prev, securityCode: masked }));
-                        }}
-                        maxLength={4}
-                      />
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-            {method === 'pix' && (
-              <div className="space-y-[5px] rounded-lg border border-dashed border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                <p>
-                  Após gerar o pagamento via PIX, o QR Code será exibido abaixo para você concluir o pagamento
-                  diretamente pelo seu aplicativo bancário.
-                </p>
-                <p className="text-xs text-blue-800">
-                  A atualização do status e do saldo ocorrerá automaticamente assim que o PIX for confirmado.
-                </p>
-              </div>
-            )}
-            <Button
-              type="submit"
-              disabled={
-                submitting ||
-                loadingPaymentOptions ||
-                !optionsForMethod.length ||
-                !selectedPaymentOptionId
-              }
-              className="w-full"
-            >
-              {submitting ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processando...
-                </span>
-              ) : (
-                'Pagar agora'
+
+                  {/* Parcelas (cartão) */}
+                  {showCreditCardFields && selectedPaymentOption && maxInstallments > 1 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium text-slate-700">Parcelas</Label>
+                      <Select value={installments.toString()} onValueChange={(value) => setInstallments(Number(value))}>
+                        <SelectTrigger className="w-full bg-white border-slate-400 focus:border-primary">
+                          <SelectValue placeholder="Quantidade de parcelas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {installmentOptions.map((option) => {
+                            const feeAmount = calculateInstallmentInterestAmount(amountBaseValue, selectedPaymentOption, option);
+                            const totalWithFee = amountBaseValue + feeAmount;
+                            const perInstallment = option > 0 ? totalWithFee / option : totalWithFee;
+                            const semTaxas = option === 1 || feeAmount <= 0;
+                            return (
+                              <SelectItem key={option} value={option.toString()}>
+                                {option}x de {formatCurrency(perInstallment)}
+                                {semTaxas
+                                  ? ' sem taxas'
+                                  : ` (${formatInstallmentInterest(getInstallmentInterestRule(selectedPaymentOption, option))})`}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Taxas do plano: {interestDescription}</p>
+                    </div>
+                  )}
+
+                  {/* Dados do cartão */}
+                  {showCreditCardFields && selectedPaymentOption && (
+                    <div className="space-y-4 pt-2 border-t border-slate-100">
+                      <h3 className="text-sm font-semibold text-slate-700 pt-2">Dados do cartão</h3>
+                      {/* Preview do cartão */}
+                      <div className="max-w-[260px] mx-auto">
+                        <div className="relative aspect-[1.586] w-full overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-4 text-white shadow-md">
+                          <div className="absolute right-4 top-4 h-8 w-12 rounded-md border border-white/15 bg-white/10" />
+                          <div className="flex items-center justify-between">
+                            <div className="h-6 w-9 rounded bg-gradient-to-br from-amber-300/90 to-amber-500/90 shadow-inner" />
+                            <div className="text-[9px] uppercase tracking-widest text-white/50">Cartão</div>
+                          </div>
+                          <div className="mt-4 text-base font-semibold tracking-[0.18em]">{cardNumberDisplay}</div>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <div>
+                              <div className="text-[8px] tracking-widest text-white/40 uppercase">Titular</div>
+                              <div className="mt-0.5 text-[11px] text-white font-medium truncate">{cardHolderDisplay}</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1">
+                              <div>
+                                <div className="text-[8px] tracking-widest text-white/40 uppercase">Val.</div>
+                                <div className="mt-0.5 text-[11px] text-white font-medium">{cardExpDisplay}</div>
+                              </div>
+                              <div>
+                                <div className="text-[8px] tracking-widest text-white/40 uppercase">CVV</div>
+                                <div className="mt-0.5 text-[11px] text-white font-medium">{cardCvvDisplay}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Inputs */}
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium text-slate-700">Número do cartão</Label>
+                          <Input
+                            className="mt-1.5"
+                            placeholder="0000 0000 0000 0000"
+                            value={cardData.cardNumber}
+                            onChange={(event) => {
+                              const masked = maskCreditCard(event.target.value);
+                              setCardData((prev) => ({ ...prev, cardNumber: masked }));
+                            }}
+                            maxLength={19}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-slate-700">Nome no cartão</Label>
+                          <Input
+                            className="mt-1.5"
+                            placeholder="NOME COMPLETO"
+                            value={cardData.cardHolder}
+                            onChange={(event) =>
+                              setCardData((prev) => ({ ...prev, cardHolder: event.target.value.toUpperCase() }))
+                            }
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-sm font-medium text-slate-700">Validade</Label>
+                            <Input
+                              className="mt-1.5"
+                              placeholder="MM/AAAA"
+                              value={cardData.expirationDate}
+                              onChange={(event) => {
+                                const masked = maskCardExpiry(event.target.value);
+                                setCardData((prev) => ({ ...prev, expirationDate: masked }));
+                              }}
+                              maxLength={7}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-slate-700">CVV</Label>
+                            <Input
+                              className="mt-1.5"
+                              placeholder="123"
+                              type="password"
+                              value={cardData.securityCode}
+                              onChange={(event) => {
+                                const masked = maskCVV(event.target.value);
+                                setCardData((prev) => ({ ...prev, securityCode: masked }));
+                              }}
+                              maxLength={4}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PIX info — igual ao primeiro pagamento */}
+                  {method === 'pix' && (
+                    <div className="space-y-2">
+                      <div className="flex gap-3 rounded-xl bg-blue-50 border border-blue-100 p-3.5 text-sm">
+                        <QrCode className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-blue-800">Aprovação imediata</p>
+                          <p className="text-xs text-blue-600 mt-0.5">O pagamento com PIX leva pouco tempo para ser processado.</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 rounded-xl bg-green-50 border border-green-100 p-3.5 text-sm">
+                        <Check className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-green-800">Finalize com facilidade</p>
+                          <p className="text-xs text-green-600 mt-0.5">
+                            Após gerar o pagamento, o QR Code será exibido abaixo. Escaneie ou cole o código no seu app bancário.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ATENÇÃO */}
+                  <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <span className="text-amber-500 text-base shrink-0 mt-0.5">⚠</span>
+                    <div>
+                      <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">Atenção</p>
+                      <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                        Sua vaga no evento só será confirmada após a realização do pagamento. O não pagamento implicará no
+                        cancelamento automático da inscrição.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={submitting || !optionsForMethod.length || !selectedPaymentOptionId}
+                    className="w-full"
+                  >
+                    {submitting ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processando...
+                      </span>
+                    ) : (
+                      'Pagar agora'
+                    )}
+                  </Button>
+                </>
               )}
-            </Button>
-          </form>
+            </form>
           </div>
         )}
 
