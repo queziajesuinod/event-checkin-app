@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import {
   buscarFormasPagamento,
+  buscarTaxasCartao,
   listarCamposFormulario,
   consultarInscricao,
   criarPagamentoInscricao,
+  type CieloBrandRates,
   type CreateRegistrationPaymentPayload,
   type FormField,
   type PaymentOption,
@@ -26,8 +28,12 @@ const formatFieldName = (name: string) =>
   name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 import { maskCardExpiry, maskCreditCard, maskCVV, removeNonDigits } from '@/lib/masks';
 import {
-  calculateInstallmentInterestAmount,
+  applyBrandInstallmentInterest,
+  calculateBrandInstallmentInterestAmount,
+  detectCardBrandKey,
+  formatBrandInstallmentInterest,
   formatInstallmentInterest,
+  getCieloInstallmentRate,
   getInstallmentInterestRule,
 } from '@/lib/installmentInterest';
 
@@ -130,6 +136,7 @@ export default function RegistrationView() {
   const [method, setMethod] = useState<'pix' | 'credit_card'>('pix');
   const [amountMode, setAmountMode] = useState<'integral' | 'outro'>('integral');
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
+  const [taxasCartao, setTaxasCartao] = useState<CieloBrandRates>({});
   const [selectedPaymentOptionId, setSelectedPaymentOptionId] = useState('');
   const [loadingPaymentOptions, setLoadingPaymentOptions] = useState(false);
   const [formFields, setFormFields] = useState<FormField[]>([]);
@@ -272,6 +279,21 @@ export default function RegistrationView() {
       .catch(() => setFormFields([]));
   }, [registration?.event?.id]);
 
+  // Taxas Cielo por bandeira — usadas para repassar a taxa de parcelamento no cartão
+  useEffect(() => {
+    let cancelled = false;
+    buscarTaxasCartao()
+      .then((rates) => {
+        if (!cancelled) setTaxasCartao(rates);
+      })
+      .catch(() => {
+        if (!cancelled) setTaxasCartao({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const sortedPayments = useMemo(() => {
     if (!registration) return [];
     const payments = Array.isArray(registration.payments) ? registration.payments : [];
@@ -386,8 +408,6 @@ export default function RegistrationView() {
     method === 'credit_card' && selectedPaymentOption?.paymentType === 'credit_card';
   const maxInstallments = Math.max(1, selectedPaymentOption?.maxInstallments ?? 1);
   const installmentOptions = Array.from({ length: maxInstallments }, (_, index) => index + 1);
-  const selectedInstallmentInterest = getInstallmentInterestRule(selectedPaymentOption, installments);
-  const interestDescription = formatInstallmentInterest(selectedInstallmentInterest);
 
   // Métodos disponíveis (para os botões PIX / Cartão)
   const pixAvailable = paymentOptions.some(
@@ -408,6 +428,10 @@ export default function RegistrationView() {
 
   // Base para calcular o valor da parcela exibido no seletor
   const amountBaseValue = Number((amount || '').replace(',', '.')) || 0;
+
+  // Bandeira do cartão para repasse exato da taxa (fallback 'visa' antes de digitar)
+  const bandeiraCartao = detectCardBrandKey(cardData.cardNumber || '');
+  const bandeiraParaCalculo = bandeiraCartao || 'visa';
 
   // Pré-visualização do cartão
   const cardNumberDisplay = cardData.cardNumber?.trim() || '•••• •••• •••• ••••';
@@ -467,7 +491,13 @@ export default function RegistrationView() {
     try {
       setSubmitting(true);
       const feeAmount = method === 'credit_card'
-        ? calculateInstallmentInterestAmount(parsedAmount, selectedPaymentOption, installments)
+        ? calculateBrandInstallmentInterestAmount(
+            parsedAmount,
+            selectedPaymentOption,
+            installments,
+            taxasCartao,
+            bandeiraParaCalculo
+          )
         : 0;
       const totalAmount = Number((parsedAmount + feeAmount).toFixed(2));
       const payload: CreateRegistrationPaymentPayload = {
@@ -888,22 +918,37 @@ export default function RegistrationView() {
                         </SelectTrigger>
                         <SelectContent>
                           {installmentOptions.map((option) => {
-                            const feeAmount = calculateInstallmentInterestAmount(amountBaseValue, selectedPaymentOption, option);
-                            const totalWithFee = amountBaseValue + feeAmount;
-                            const perInstallment = option > 0 ? totalWithFee / option : totalWithFee;
-                            const semTaxas = option === 1 || feeAmount <= 0;
+                            const totalParcelado = applyBrandInstallmentInterest(
+                              amountBaseValue,
+                              selectedPaymentOption,
+                              option,
+                              taxasCartao,
+                              bandeiraParaCalculo
+                            );
+                            const perInstallment = option > 0 ? totalParcelado / option : totalParcelado;
+                            const taxaParcela = getCieloInstallmentRate(taxasCartao, bandeiraParaCalculo, option);
+                            const semTaxas =
+                              selectedPaymentOption.absorverTaxaParcelamento ||
+                              option === 1 ||
+                              taxaParcela === null ||
+                              taxaParcela <= 0;
                             return (
                               <SelectItem key={option} value={option.toString()}>
                                 {option}x de {formatCurrency(perInstallment)}
                                 {semTaxas
                                   ? ' sem taxas'
-                                  : ` (${formatInstallmentInterest(getInstallmentInterestRule(selectedPaymentOption, option))})`}
+                                  : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, option)})`}
                               </SelectItem>
                             );
                           })}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground">Taxas do plano: {interestDescription}</p>
+                      {!selectedPaymentOption.absorverTaxaParcelamento && (
+                        <p className="text-xs text-muted-foreground">
+                          Taxa de parcelamento repassada:{' '}
+                          {formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, installments)}
+                        </p>
+                      )}
                     </div>
                   )}
 
