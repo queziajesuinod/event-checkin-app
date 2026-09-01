@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin, Users, Download, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, Download, Loader2, CheckCircle2, XCircle, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
@@ -35,6 +35,7 @@ interface Registration {
   paidTotal?: number;
   paymentStatus: string;
   remaining?: number;
+  hasSignedTerm?: boolean;
   payments?: Array<{
     amount: number;
     status?: string | null;
@@ -787,6 +788,21 @@ export default function Ticket() {
                 Este pedido foi cancelado e não é possível gerar ou apresentar o ticket.
               </p>
             ) : null}
+
+            {!isCancelled && registration.hasSignedTerm && (
+              <Button
+                variant="outline"
+                className="w-full"
+                size="lg"
+                onClick={() => window.open(
+                  `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/public/events/registrations/${registration.orderCode}/term-pdf`,
+                  '_blank',
+                )}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Baixar termo assinado (PDF)
+              </Button>
+            )}
           </CardContent>
         </Card>
 

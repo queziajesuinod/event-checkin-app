@@ -32,7 +32,9 @@ import {
   type PaymentOption,
   type CieloBrandRates,
   type RegistrationResponse,
+  type TermAcceptance,
 } from '@/lib/eventsApi';
+import { LiabilityTermDialog } from '@/components/LiabilityTermDialog';
 import { maskCPForCNPJ, maskPhone, validateCPForCNPJ, validateEmail, removeNonDigits, maskCreditCard, maskCardExpiry, maskCVV } from '@/lib/masks';
 import { isBatchActiveNow } from '@/lib/eventUtils';
 import {
@@ -223,6 +225,10 @@ function DebouncedTextarea({
   );
 }
 
+// Em evento gratuito não há "comprador" — os mesmos campos representam o
+// "Responsável pelo ingresso" (destinatário do ticket / membro).
+const relabelResponsavel = (label: string) => label.replace(/comprador/gi, 'Responsável pelo ingresso');
+
 export default function EventDetails() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute('/eventos/:id');
@@ -286,6 +292,9 @@ export default function EventDetails() {
   const paymentUnavailable = !hasLotAvailable || formasPagamento.length === 0;
   const [cardDeniedModalOpen, setCardDeniedModalOpen] = useState(false);
   const [cardDeniedMessage, setCardDeniedMessage] = useState('');
+  // Termo de responsabilidade: modal de assinatura e aceites coletados.
+  const [termoOpen, setTermoOpen] = useState(false);
+  const [termAcceptances, setTermAcceptances] = useState<TermAcceptance[]>([]);
   const [palette, setPalette] = useState<ImagePalette | null>(null);
   const [view, setView] = useState<'detail' | 'checkout'>('detail');
   const [step, setStep] = useState<1 | 2>(1);
@@ -644,12 +653,16 @@ export default function EventDetails() {
     }
   }, [composicaoLotes, cupomValido]);
 
-  const calcularSubtotal = () =>
-    inscritos.reduce((sum, inscrito) => {
+  const calcularSubtotal = () => {
+    // Evento marcado como gratuito: preço zero independentemente do preço dos lotes
+    // (mesma regra do backend, que força precoOriginal = 0 quando requiresPayment === false).
+    if (evento?.requiresPayment === false) return 0;
+    return inscritos.reduce((sum, inscrito) => {
       if (!inscrito.batchId) return sum;
       const lote = lotesById.get(inscrito.batchId);
       return sum + (lote ? Number(lote.price) : 0);
     }, 0);
+  };
 
   const calcularDesconto = (subtotal: number) => {
     if (!cupomValido) return 0;
@@ -699,10 +712,10 @@ export default function EventDetails() {
       return false;
     }
 
-    // Validar campos do comprador
+    // Validar campos do responsável pelo ingresso (comprador) — usados no ticket/membro.
     for (const campo of camposComprador) {
       if (campo.isRequired && !dadosComprador[campo.fieldName]) {
-        toast.error(`Campo obrigatório: ${campo.label}`);
+        toast.error(`Campo obrigatório: ${requiresPayment ? campo.label : relabelResponsavel(campo.label)}`);
         return false;
       }
     }
@@ -856,8 +869,23 @@ export default function EventDetails() {
       setValidandoRegras(false);
     }
 
+    // Termo de responsabilidade: se o evento exige e ainda nao foi assinado,
+    // abre o modal do termo antes de liberar a etapa de pagamento.
+    if (evento?.requiresLiabilityTerm && evento?.liabilityTerm && termAcceptances.length !== inscritos.length) {
+      setTermoOpen(true);
+      return;
+    }
+
     // Os dados do comprador são preenchidos na etapa de pagamento; a validação
     // deles (e a validação do pagamento) ocorre no envio final (validarFormulario).
+    setStep(2);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Confirmação do termo: guarda os aceites (dados vêm do inscrito) e segue para o pagamento.
+  const handleTermoConfirm = (acceptances: TermAcceptance[]) => {
+    setTermAcceptances(acceptances);
+    setTermoOpen(false);
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -916,6 +944,12 @@ export default function EventDetails() {
       if (!validarFormulario()) return;
       if (!(await ensureSelectedBatchesStillAvailable())) return;
 
+      // Salvaguarda: evento com termo exige aceite de cada participante antes de cobrar.
+      if (evento?.requiresLiabilityTerm && termAcceptances.length !== inscritos.length) {
+        setTermoOpen(true);
+        return;
+      }
+
       const pagamentoBase = isBalanceDue ? baseDepositoSemJuros : totalSemJuros;
       const taxaPagamento = selectedPaymentOption?.paymentType === 'credit_card'
         ? calculateBrandInstallmentInterestAmount(pagamentoBase, selectedPaymentOption, parcelas, taxasCartao, bandeiraParaCalculo)
@@ -942,6 +976,7 @@ export default function EventDetails() {
               totalAmount: pagamentoTotal,
             }
           : undefined,
+        termAcceptances: evento?.requiresLiabilityTerm ? termAcceptances : undefined,
       });
 
     const isSuccessful = Boolean(
@@ -1661,7 +1696,7 @@ export default function EventDetails() {
               <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 2 ? 'bg-primary text-white ring-2 ring-white/30' : 'bg-white/20 text-white/60'}`}>
                 2
               </div>
-              Pagamento
+              {requiresPayment ? 'Pagamento' : 'Confirmação'}
             </div>
           </div>
         </div>
@@ -1887,7 +1922,9 @@ export default function EventDetails() {
                       ? 'Inscrições encerradas'
                       : validandoRegras
                       ? 'Validando...'
-                      : 'Continuar com Pagamento →'}
+                      : requiresPayment
+                      ? 'Continuar com Pagamento →'
+                      : 'Continuar →'}
                   </Button>
                   <button
                     type="button"
@@ -1908,15 +1945,17 @@ export default function EventDetails() {
 
               {/* Esquerda: Dados do comprador + Forma de pagamento */}
               <div className="space-y-5">
-                {/* Dados do Comprador */}
+                {/* Dados do comprador (pago) / responsável pelo ingresso (gratuito) */}
                 {camposComprador.length > 0 && (
                   <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6">
-                    <h2 className="text-base font-semibold text-slate-900 mb-5">Seus dados</h2>
+                    <h2 className="text-base font-semibold text-slate-900 mb-5">
+                      {requiresPayment ? 'Seus dados' : 'Responsável pelo ingresso'}
+                    </h2>
                     <div className="space-y-4">
                       {camposComprador.map((campo) => (
                         <div key={campo.id}>
                           <Label htmlFor={campo.fieldName} className="text-sm font-medium text-slate-700">
-                            {campo.label}
+                            {requiresPayment ? campo.label : relabelResponsavel(campo.label)}
                             {campo.isRequired && <span className="text-red-500 ml-1">*</span>}
                           </Label>
                           <div className="mt-1.5">
@@ -2240,7 +2279,7 @@ export default function EventDetails() {
                             {lote?.name ?? 'Lote'}
                           </span>
                           <span className="text-slate-900 font-medium tabular-nums">
-                            {count} × R$ {Number(lote?.price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            {count} × R$ {(evento?.requiresPayment === false ? 0 : Number(lote?.price || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
                       ))}
@@ -2310,8 +2349,10 @@ export default function EventDetails() {
                     !hasLotAvailable ? 'Inscrições encerradas' : 'Pagamento indisponível'
                   ) : submitting ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processando...</>
-                  ) : (
+                  ) : requiresPayment ? (
                     `Confirmar inscrição — R$ ${pagamentoAgora.toFixed(2)}`
+                  ) : (
+                    'Confirmar inscrição gratuita'
                   )}
                 </Button>
               </div>
@@ -2333,6 +2374,17 @@ export default function EventDetails() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {evento?.requiresLiabilityTerm && evento?.liabilityTerm ? (
+          <LiabilityTermDialog
+            open={termoOpen}
+            term={evento.liabilityTerm}
+            event={{ title: evento.title, startDate: evento.startDate, location: evento.location }}
+            attendees={inscritos.map((i, index) => ({ index, data: i.dados }))}
+            onCancel={() => setTermoOpen(false)}
+            onConfirm={handleTermoConfirm}
+          />
+        ) : null}
       </div>
     </div>
   );

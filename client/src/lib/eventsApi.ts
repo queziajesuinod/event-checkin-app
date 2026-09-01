@@ -56,6 +56,7 @@ export interface Event {
   currentRegistrations: number;
   maxPerBuyer?: number;
   isActive: boolean;
+  requiresPayment?: boolean;
   registrationPaymentMode?: 'SINGLE' | 'BALANCE_DUE';
   depositAmount?: number;
   eventType?: string;
@@ -65,6 +66,35 @@ export interface Event {
   addressNumber?: number;
   latitude?: number;
   longitude?: number;
+  requiresLiabilityTerm?: boolean;
+  liabilityTerm?: LiabilityTerm | null;
+}
+
+export interface LiabilityTerm {
+  id: string;
+  title?: string | null;
+  contentHtml: string;
+  backgroundImageUrl?: string | null;
+  contentTopOffset?: number;
+  contentBottomOffset?: number;
+  signatureMode: 'DRAW' | 'CHECKBOX' | 'TYPED';
+  requireDocument: boolean;
+  version: number;
+  participantNameField?: string | null;
+  signerNameField?: string | null;
+  signerDocumentField?: string | null;
+  collectFields?: string[];
+}
+
+export interface TermAcceptance {
+  attendeeIndex: number;
+  accepted: boolean;
+  signatureImage?: string | null; // data-URL PNG (modo DRAW)
+  signerName?: string;
+  signerDocument?: string;
+  participantName?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
 }
 
 export interface EventBatch {
@@ -171,6 +201,7 @@ export interface RegistrationData {
     interestAmount?: number;
     totalAmount?: number;
   };
+  termAcceptances?: TermAcceptance[];
 }
 
 export interface RegistrationResponse {
