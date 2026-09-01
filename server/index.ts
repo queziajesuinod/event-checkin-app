@@ -62,8 +62,21 @@ async function fetchEvento(id: string): Promise<EventMeta | null> {
   }
 }
 
+// Resolve a URL de imagem para o og:image. Crawlers exigem URL http(s) absoluta:
+// - data:base64  → servimos via /og-image/:id (que decodifica os bytes)
+// - http(s)      → usa direto
+// - relativa     → prefixa com a origem
+function resolveOgImageUrl(evento: EventMeta, id: string, origin: string): string {
+  const image = evento.imageUrl?.trim() || "";
+  if (!image) return "";
+  if (/^data:/i.test(image)) return `${origin}/og-image/${encodeURIComponent(id)}`;
+  if (/^https?:\/\//i.test(image)) return image;
+  return `${origin}${image.startsWith("/") ? "" : "/"}${image}`;
+}
+
 function buildMetaTags(
   evento: EventMeta,
+  id: string,
   pageUrl: string,
   origin: string
 ): { title: string; tags: string } {
@@ -73,11 +86,7 @@ function buildMetaTags(
     ? escapeHtml(truncate(stripHtml(evento.description)))
     : "Inscreva-se neste evento da IECG.";
 
-  let image = evento.imageUrl?.trim() || "";
-  // Garante URL absoluta para a imagem (crawlers exigem).
-  if (image && !/^https?:\/\//i.test(image)) {
-    image = `${origin}${image.startsWith("/") ? "" : "/"}${image}`;
-  }
+  const image = resolveOgImageUrl(evento, id, origin);
   const imageEsc = escapeHtml(image);
   const url = escapeHtml(pageUrl);
 
@@ -88,6 +97,7 @@ function buildMetaTags(
     `<meta property="og:description" content="${description}" />`,
     `<meta property="og:url" content="${url}" />`,
     image ? `<meta property="og:image" content="${imageEsc}" />` : "",
+    image ? `<meta property="og:image:secure_url" content="${imageEsc}" />` : "",
     image ? `<meta property="og:image:alt" content="${title}" />` : "",
     `<meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}" />`,
     `<meta name="twitter:title" content="${title}" />`,
@@ -98,6 +108,17 @@ function buildMetaTags(
     .join("\n    ");
 
   return { title: rawTitle, tags };
+}
+
+// Extrai (mime, buffer) de uma data URI base64; null se não for uma.
+function parseDataUri(value: string): { contentType: string; buffer: Buffer } | null {
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(value.trim());
+  if (!match) return null;
+  try {
+    return { contentType: match[1], buffer: Buffer.from(match[2], "base64") };
+  } catch {
+    return null;
+  }
 }
 
 async function startServer() {
@@ -113,6 +134,32 @@ async function startServer() {
   const indexPath = path.join(staticPath, "index.html");
 
   app.use(express.static(staticPath));
+
+  // Serve a imagem do evento como um arquivo de imagem real. A API guarda a
+  // imagem como data URI base64, que os crawlers (WhatsApp/Facebook) NÃO aceitam
+  // em og:image — então decodificamos e devolvemos os bytes com Content-Type.
+  app.get("/og-image/:id", async (req, res, next) => {
+    try {
+      const evento = await fetchEvento(req.params.id);
+      const image = evento?.imageUrl?.trim();
+      if (!image) return next();
+
+      const dataUri = parseDataUri(image);
+      if (dataUri) {
+        res.setHeader("Content-Type", dataUri.contentType);
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        return res.send(dataUri.buffer);
+      }
+      // Já é uma URL http(s): redireciona para ela.
+      if (/^https?:\/\//i.test(image)) {
+        return res.redirect(302, image);
+      }
+      return next();
+    } catch (error) {
+      console.error("[og] erro ao servir imagem do evento:", error);
+      return next();
+    }
+  });
 
   // Página de um evento específico: injeta título/descrição/imagem do evento nas
   // meta tags Open Graph/Twitter para gerar o preview ao compartilhar o link.
@@ -130,7 +177,7 @@ async function startServer() {
       const host = req.get("host") ?? "";
       const origin = `${proto}://${host}`;
       const pageUrl = `${origin}${req.originalUrl}`;
-      const { title, tags } = buildMetaTags(evento, pageUrl, origin);
+      const { title, tags } = buildMetaTags(evento, req.params.id, pageUrl, origin);
 
       // Troca o <title> e injeta as meta tags logo em seguida.
       const rendered = html.replace(
