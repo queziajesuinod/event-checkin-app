@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
-import { Calendar, MapPin, Tag, Loader2, ArrowLeft, CreditCard, QrCode, Plus, Check, X } from 'lucide-react';
+import { Calendar, MapPin, Tag, Loader2, ArrowLeft, CreditCard, QrCode, Plus, Check, X, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
 import {
@@ -23,6 +23,7 @@ import {
   validarCupom,
   validarRegrasInscricao,
   processarInscricao,
+  entrarListaEspera,
   buscarFormasPagamento,
   consultarInscricao,
   type Event,
@@ -298,6 +299,10 @@ export default function EventDetails() {
   const [palette, setPalette] = useState<ImagePalette | null>(null);
   const [view, setView] = useState<'detail' | 'checkout'>('detail');
   const [step, setStep] = useState<1 | 2>(1);
+  // Lista de espera: quando true, o checkout reaproveita o formulario mas nao cobra —
+  // ao final entra na fila em vez de gerar pagamento.
+  const [modoListaEspera, setModoListaEspera] = useState(false);
+  const [waitlistSuccess, setWaitlistSuccess] = useState<{ position: number; batchName?: string } | null>(null);
   const [cupomAberto, setCupomAberto] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const PAYMENT_STATUS_MESSAGES: Record<string, string> = {
@@ -704,7 +709,8 @@ export default function EventDetails() {
     return Math.max(0, total);
   };
 
-  const validarFormulario = () => {
+  const validarFormulario = (opts: { skipPayment?: boolean } = {}) => {
+    const validarPagamento = !opts.skipPayment;
     // Validar que todos os inscritos têm um lote selecionado
     const inscritosSemLote = inscritos.filter((i) => !i.batchId);
     if (inscritosSemLote.length > 0) {
@@ -728,14 +734,14 @@ export default function EventDetails() {
     }
 
     // Validar forma de pagamento selecionada (somente quando ha valor a pagar)
-    if (requiresPayment && !formaPagamento) {
+    if (validarPagamento && requiresPayment && !formaPagamento) {
       toast.error('Selecione uma forma de pagamento');
       return false;
     }
 
     // Validar dados de pagamento apenas para cartao de credito
     const formaSelecionada = findPaymentOption(formaPagamento);
-    if (requiresPayment && formaSelecionada?.paymentType === 'credit_card') {
+    if (validarPagamento && requiresPayment && formaSelecionada?.paymentType === 'credit_card') {
       if (!dadosPagamento.cardNumber || !dadosPagamento.cardHolder || 
           !dadosPagamento.expirationDate || !dadosPagamento.securityCode) {
         toast.error('Preencha todos os dados do cartão');
@@ -760,7 +766,7 @@ export default function EventDetails() {
       }
     }
 
-    if (requiresPayment && isBalanceDue) {
+    if (validarPagamento && requiresPayment && isBalanceDue) {
       if (!baseDepositoSemJuros || baseDepositoSemJuros <= 0) {
         toast.error('Informe o valor do sinal ou pagamento inicial');
         return false;
@@ -787,7 +793,8 @@ export default function EventDetails() {
 
   const avancarParaPagamento = async () => {
     if (validandoRegrasRef.current) return; // trava contra duplo-clique
-    if (!hasLotAvailable) {
+    // Na lista de espera o lote esta esgotado de proposito — nao bloqueia o avanco.
+    if (!hasLotAvailable && !modoListaEspera) {
       toast.error('Inscrições encerradas para este evento.');
       return;
     }
@@ -892,10 +899,54 @@ export default function EventDetails() {
 
   const iniciarInscricao = (batchId: string) => {
     const autoSalvo = camposInscrito.length === 0;
+    setModoListaEspera(false);
     setInscritos([{ dados: {}, salvo: autoSalvo, id: Date.now().toString(), batchId }]);
     setStep(1);
     setView('checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Inicia o fluxo de LISTA DE ESPERA para um lote esgotado (mesmo formulario, sem pagamento).
+  const iniciarListaEspera = (batchId: string) => {
+    const autoSalvo = camposInscrito.length === 0;
+    setModoListaEspera(true);
+    setInscritos([{ dados: {}, salvo: autoSalvo, id: Date.now().toString(), batchId }]);
+    setStep(1);
+    setView('checkout');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSubmitListaEspera = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      if (!validarFormulario({ skipPayment: true })) return;
+      // Termo de responsabilidade (se exigido) antes de entrar na fila.
+      if (evento?.requiresLiabilityTerm && evento?.liabilityTerm && termAcceptances.length !== inscritos.length) {
+        setTermoOpen(true);
+        return;
+      }
+      const resultado = await entrarListaEspera(eventId, {
+        buyerData: dadosComprador,
+        attendeesData: inscritos.map((i) => ({ batchId: i.batchId!, data: i.dados })),
+        couponCode: cupomValido ? cupomCodigo.trim() : undefined,
+        termAcceptances: evento?.requiresLiabilityTerm ? termAcceptances : undefined,
+      });
+      if (resultado?.sucesso) {
+        const batchName = lotesById.get(inscritos[0]?.batchId || '')?.name;
+        setWaitlistSuccess({ position: resultado.position, batchName });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        toast.error(resultado?.message || 'Não foi possível entrar na lista de espera.');
+      }
+    } catch (error: unknown) {
+      const axiosLikeError = error as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(axiosLikeError.response?.data?.message || axiosLikeError.message || 'Erro ao entrar na lista de espera');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   const ensureSelectedBatchesStillAvailable = async () => {
@@ -927,6 +978,12 @@ export default function EventDetails() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Modo lista de espera: nao cobra — entra na fila e sai.
+    if (modoListaEspera) {
+      await handleSubmitListaEspera();
+      return;
+    }
 
     // Bloqueia reentrância na hora: em internet lenta a pessoa clica várias vezes antes
     // do botão desabilitar (setSubmitting é assíncrono e ainda há um await de validação
@@ -1318,6 +1375,43 @@ export default function EventDetails() {
     );
   }
 
+  // ──── VIEW: SUCESSO NA LISTA DE ESPERA ────
+  if (waitlistSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <Clock className="h-8 w-8 text-amber-600" />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900">Você está na lista de espera!</h1>
+          {waitlistSuccess.batchName && (
+            <p className="text-sm text-slate-500 mt-1">Lote: {waitlistSuccess.batchName}</p>
+          )}
+          <div className="my-5">
+            <p className="text-sm text-slate-500">Sua posição na fila</p>
+            <p className="text-4xl font-bold text-amber-600 mt-1">#{waitlistSuccess.position}</p>
+          </div>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Assim que uma vaga abrir, enviaremos um link por e-mail
+            {evento?.waitlistOfferTtlHours ? ` (e você terá ${evento.waitlistOfferTtlHours}h para pagar)` : ''} para
+            você garantir sua inscrição. Fique de olho no seu e-mail e WhatsApp.
+          </p>
+          <Button
+            className="w-full h-11 mt-6 font-semibold"
+            onClick={() => {
+              setWaitlistSuccess(null);
+              setModoListaEspera(false);
+              setView('detail');
+              setLocation('/eventos');
+            }}
+          >
+            Voltar aos eventos
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // ──── VIEW: DETALHE DO EVENTO ────
   if (view === 'detail') {
     const fmtDataCompleta = (d: Date) =>
@@ -1367,6 +1461,7 @@ export default function EventDetails() {
         }
       }
       if (novos.length === 0) return;
+      setModoListaEspera(false);
       setInscritos(novos);
       setStep(1);
       setView('checkout');
@@ -1593,6 +1688,15 @@ export default function EventDetails() {
                                 +
                               </button>
                             </div>
+                          ) : esgotado && evento?.waitlistEnabled ? (
+                            <button
+                              type="button"
+                              onClick={() => iniciarListaEspera(lote.id)}
+                              className="text-xs shrink-0 font-semibold rounded-full border border-amber-300 bg-amber-50 text-amber-700 px-3 py-1.5 hover:bg-amber-100 transition-colors flex items-center gap-1"
+                            >
+                              <Clock className="h-3.5 w-3.5" />
+                              Lista de espera
+                            </button>
                           ) : (
                             <span className={`text-xs shrink-0 font-medium ${naoComecou ? 'text-blue-500' : 'text-slate-400'}`}>
                               {naoComecou ? 'Em breve' : 'Indisponível'}
@@ -1676,7 +1780,7 @@ export default function EventDetails() {
             type="button"
             onClick={() => {
               if (step === 2) setStep(1);
-              else setView('detail');
+              else { setView('detail'); setModoListaEspera(false); }
             }}
             className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors cursor-pointer"
           >
@@ -1734,9 +1838,15 @@ export default function EventDetails() {
             <div className="grid lg:grid-cols-[1fr_400px] gap-8 items-start">
             {/* Esquerda: formulários */}
             <div className="space-y-5">
-              {!hasLotAvailable && (
+              {!hasLotAvailable && !modoListaEspera && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-700">
                   Inscrições encerradas — nenhum lote ativo dentro do período vigente.
+                </div>
+              )}
+              {modoListaEspera && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-700 flex items-center justify-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  Lista de espera — preencha seus dados para entrar na fila.
                 </div>
               )}
 
@@ -1755,7 +1865,7 @@ export default function EventDetails() {
                       variant="outline"
                       size="sm"
                       onClick={adicionarInscrito}
-                      disabled={!hasLotAvailable || inscritos.length >= (evento?.maxPerBuyer || 10)}
+                      disabled={(!hasLotAvailable && !modoListaEspera) || inscritos.length >= (evento?.maxPerBuyer || 10)}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />
                       Adicionar
@@ -1915,20 +2025,22 @@ export default function EventDetails() {
                     size="lg"
                     className="w-full h-11 font-semibold"
                     onClick={avancarParaPagamento}
-                    disabled={!hasLotAvailable || validandoRegras}
-                    style={accentButtonStyle(hasLotAvailable && !validandoRegras)}
+                    disabled={(!hasLotAvailable && !modoListaEspera) || validandoRegras}
+                    style={accentButtonStyle((hasLotAvailable || modoListaEspera) && !validandoRegras)}
                   >
-                    {!hasLotAvailable
+                    {(!hasLotAvailable && !modoListaEspera)
                       ? 'Inscrições encerradas'
                       : validandoRegras
                       ? 'Validando...'
+                      : modoListaEspera
+                      ? 'Continuar →'
                       : requiresPayment
                       ? 'Continuar com Pagamento →'
                       : 'Continuar →'}
                   </Button>
                   <button
                     type="button"
-                    onClick={() => setView('detail')}
+                    onClick={() => { setView('detail'); setModoListaEspera(false); }}
                     className="w-full text-xs text-primary hover:underline py-1 text-center cursor-pointer"
                   >
                     Voltar para selecionar Ingressos
@@ -1972,7 +2084,7 @@ export default function EventDetails() {
                   </div>
                 )}
 
-                {requiresPayment ? (
+                {requiresPayment && !modoListaEspera ? (
                   <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6 space-y-5">
                     <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
                       <CreditCard className="h-5 w-5 text-slate-400" />
@@ -2239,6 +2351,18 @@ export default function EventDetails() {
                       </>
                     )}
                   </div>
+                ) : modoListaEspera ? (
+                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-amber-200 shadow-xl p-6">
+                    <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+                      <Clock className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <p className="font-semibold text-slate-900 text-center">Lista de espera</p>
+                    <p className="text-sm text-slate-500 mt-1 text-center">
+                      Este lote está esgotado. Preencha seus dados para entrar na fila — quando uma vaga abrir, você
+                      recebe um link por e-mail{evento?.waitlistOfferTtlHours ? ` e tem ${evento.waitlistOfferTtlHours}h para pagar` : ''} e
+                      garantir sua inscrição. Você <strong>não</strong> paga nada agora.
+                    </p>
+                  </div>
                 ) : (
                   <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6 text-center">
                     <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
@@ -2342,10 +2466,16 @@ export default function EventDetails() {
                   type="submit"
                   size="lg"
                   className="w-full h-12 text-base font-semibold"
-                  disabled={submitting || paymentUnavailableEffective}
-                  style={accentButtonStyle(!submitting && !paymentUnavailableEffective)}
+                  disabled={submitting || (!modoListaEspera && paymentUnavailableEffective)}
+                  style={accentButtonStyle(!submitting && (modoListaEspera || !paymentUnavailableEffective))}
                 >
-                  {paymentUnavailableEffective ? (
+                  {modoListaEspera ? (
+                    submitting ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando...</>
+                    ) : (
+                      'Entrar na lista de espera'
+                    )
+                  ) : paymentUnavailableEffective ? (
                     !hasLotAvailable ? 'Inscrições encerradas' : 'Pagamento indisponível'
                   ) : submitting ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processando...</>

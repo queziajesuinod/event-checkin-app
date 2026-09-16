@@ -68,6 +68,8 @@ export interface Event {
   longitude?: number;
   requiresLiabilityTerm?: boolean;
   liabilityTerm?: LiabilityTerm | null;
+  waitlistEnabled?: boolean;
+  waitlistOfferTtlHours?: number;
 }
 
 export interface LiabilityTerm {
@@ -109,6 +111,9 @@ export interface EventBatch {
   isActive: boolean;
   vagasDisponiveis?: number | null;
   inscritosOcupados?: number;
+  esgotado?: boolean;
+  waitlistEnabled?: boolean;
+  waitlistAvailable?: boolean;
 }
 
 export interface FormField {
@@ -423,6 +428,49 @@ export const processarInscricao = async (
 // Consultar inscrição por código
 export const consultarInscricao = async (orderCode: string) => {
   const response = await api.get(`/api/public/events/registrations/${orderCode}`);
+  return response.data;
+};
+
+// ============= LISTA DE ESPERA =============
+export interface WaitlistJoinData {
+  batchId?: string;
+  buyerData: Record<string, any>;
+  attendeesData: Array<{ batchId: string; data: Record<string, any> }>;
+  couponCode?: string;
+  termAcceptances?: TermAcceptance[];
+}
+
+export interface WaitlistJoinResponse {
+  sucesso: boolean;
+  message: string;
+  position: number;
+  entry: { id: string; status: string; batchId: string; quantity: number };
+}
+
+export interface WaitlistPosition {
+  found: boolean;
+  status?: 'waiting' | 'offered';
+  position?: number;
+  batch?: { id: string; name: string; sector?: string | null } | null;
+  offerExpiresAt?: string | null;
+  orderCode?: string | null;
+}
+
+// Entrar na lista de espera de um lote (mesmo payload da inscrição, SEM pagamento).
+export const entrarListaEspera = async (
+  eventId: string,
+  data: WaitlistJoinData
+): Promise<WaitlistJoinResponse> => {
+  const response = await api.post(`/api/public/events/${eventId}/waitlist`, data);
+  return response.data;
+};
+
+// Consultar posição/status na fila (por e-mail ou CPF).
+export const consultarPosicaoListaEspera = async (
+  eventId: string,
+  params: { email?: string; cpf?: string; batchId?: string }
+): Promise<WaitlistPosition> => {
+  const response = await api.get(`/api/public/events/${eventId}/waitlist/position`, { params });
   return response.data;
 };
 

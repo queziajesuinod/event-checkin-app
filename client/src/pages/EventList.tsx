@@ -360,9 +360,11 @@ export default function EventList() {
     const possuiLoteAtivo = availability?.hasActiveBatch ?? false;
     // Encerrado só serve para o visual esmaecido (eventos passados)
     const encerrado = isPast;
+    // Esgotado + lista de espera habilitada: a pessoa ainda pode ir aos detalhes p/ entrar na fila.
+    const podeIrListaEspera = !isPast && esgotado && Boolean(evento.waitlistEnabled);
     const podeIrDetalhes = isUpcoming
       ? true
-      : !isPast && !availabilityLoading && possuiLoteAtivo && !esgotado;
+      : podeIrListaEspera || (!isPast && !availabilityLoading && possuiLoteAtivo && !esgotado);
     const botaoLabel = isPast
       ? 'Encerrado'
       : isUpcoming
@@ -370,7 +372,7 @@ export default function EventList() {
         : availabilityLoading
           ? 'Verificando...'
           : esgotado
-            ? 'Esgotado'
+            ? (evento.waitlistEnabled ? 'Entrar na lista de espera' : 'Esgotado')
             : possuiLoteAtivo
               ? 'Ver detalhes'
               : 'Encerrado';
@@ -400,7 +402,7 @@ export default function EventList() {
               {esgotado && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                   <span className="bg-white/20 backdrop-blur text-white font-semibold text-sm px-4 py-1.5 rounded-full">
-                    Esgotado
+                    {evento.waitlistEnabled ? 'Lista de espera' : 'Esgotado'}
                   </span>
                 </div>
               )}

@@ -36,6 +36,7 @@ interface Registration {
   paymentStatus: string;
   remaining?: number;
   hasSignedTerm?: boolean;
+  hasPaymentReceipt?: boolean;
   payments?: Array<{
     amount: number;
     status?: string | null;
@@ -801,6 +802,21 @@ export default function Ticket() {
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Baixar termo assinado (PDF)
+              </Button>
+            )}
+
+            {!isCancelled && registration.hasPaymentReceipt && (
+              <Button
+                variant="outline"
+                className="w-full"
+                size="lg"
+                onClick={() => window.open(
+                  `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/public/events/registrations/${registration.orderCode}/payment-receipt`,
+                  '_blank',
+                )}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Baixar comprovante de pagamento (PDF)
               </Button>
             )}
           </CardContent>
