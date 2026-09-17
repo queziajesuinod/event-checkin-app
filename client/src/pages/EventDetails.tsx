@@ -1138,8 +1138,10 @@ export default function EventDetails() {
     onChange: (value: any) => void,
     inputId?: string
   ) => {
-    // Borda mais escura + fundo branco + largura total para os campos ficarem nítidos
-    const fieldClass = 'w-full bg-white border-slate-400 focus-visible:border-primary';
+    // Borda mais escura + fundo branco + largura total para os campos ficarem nítidos.
+    // No mobile os campos ficam mais altos e com fonte maior (mais fáceis de tocar);
+    // a partir de sm voltam ao tamanho padrão.
+    const fieldClass = 'w-full bg-white border-slate-400 focus-visible:border-primary h-12 sm:h-9 text-base sm:text-sm';
     const commonProps = {
       id: inputId || campo.fieldName,
       placeholder: campo.placeholder,
@@ -1222,7 +1224,7 @@ export default function EventDetails() {
       case 'select':
         return (
           <Select value={valor || ''} onValueChange={onChange}>
-            <SelectTrigger className="w-full bg-white border-slate-400 focus:border-primary">
+            <SelectTrigger className="w-full bg-white border-slate-400 focus:border-primary h-12 sm:h-9 text-base sm:text-sm">
               <SelectValue placeholder={campo.placeholder || 'Selecione...'} />
             </SelectTrigger>
             <SelectContent>
@@ -1512,8 +1514,8 @@ export default function EventDetails() {
         <div className="container max-w-5xl mx-auto px-4 py-10 pb-32">
           <div className="grid lg:grid-cols-[1fr_400px] gap-10 items-start">
 
-            {/* ── ESQUERDA: Informações ── */}
-            <div className="space-y-6">
+            {/* ── ESQUERDA: Informações ── (no mobile vem depois da imagem/ingressos) */}
+            <div className="space-y-6 order-2 lg:order-1">
               <div>
                 <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
                   {evento.title}
@@ -1591,8 +1593,8 @@ export default function EventDetails() {
               )}
             </div>
 
-            {/* ── DIREITA: Imagem + card Ingressos com contadores ── */}
-            <div className="sticky top-20 space-y-4">
+            {/* ── DIREITA: Imagem + card Ingressos com contadores ── (no mobile vem primeiro) */}
+            <div className="order-1 lg:order-2 space-y-4 lg:sticky lg:top-20">
               {/* Imagem destaque */}
               {evento.imageUrl && (
                 <div
@@ -1775,20 +1777,24 @@ export default function EventDetails() {
 
       {/* Topbar */}
       <div className="border-b border-white/10 px-4 py-3 sticky top-0 z-20 bg-slate-900/30 backdrop-blur-md">
-        <div className="container max-w-6xl mx-auto flex items-center justify-between">
+        <div className="container max-w-6xl mx-auto flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => {
               if (step === 2) setStep(1);
               else { setView('detail'); setModoListaEspera(false); }
             }}
-            className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors cursor-pointer shrink-0"
           >
-            <ArrowLeft className="h-4 w-4" />
-            {step === 2 ? 'Voltar para inscrição' : 'Voltar para o evento'}
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            {/* No mobile o texto é curto para não brigar por espaço com o stepper */}
+            <span className="hidden sm:inline whitespace-nowrap">
+              {step === 2 ? 'Voltar para inscrição' : 'Voltar para o evento'}
+            </span>
+            <span className="sm:hidden">Voltar</span>
           </button>
           {/* Stepper inline no topo */}
-          <div className="flex items-center gap-2 text-xs font-medium">
+          <div className="flex items-center gap-2 text-xs font-medium shrink-0">
             <div className={`flex items-center gap-1.5 ${step >= 1 ? 'text-white' : 'text-white/40'}`}>
               <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step > 1 ? 'bg-primary text-white' : step === 1 ? 'bg-primary text-white ring-2 ring-white/30' : 'bg-white/20 text-white/60'}`}>
                 {step > 1 ? <Check className="h-3 w-3" /> : '1'}
@@ -1852,7 +1858,7 @@ export default function EventDetails() {
 
               {/* Inscritos */}
               {camposInscrito.length > 0 && (
-                <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6">
+                <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h2 className="text-base font-semibold text-slate-900">Inscritos</h2>
@@ -2059,7 +2065,7 @@ export default function EventDetails() {
               <div className="space-y-5">
                 {/* Dados do comprador (pago) / responsável pelo ingresso (gratuito) */}
                 {camposComprador.length > 0 && (
-                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6">
+                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-4 sm:p-6">
                     <h2 className="text-base font-semibold text-slate-900 mb-5">
                       {requiresPayment ? 'Seus dados' : 'Responsável pelo ingresso'}
                     </h2>
@@ -2085,7 +2091,7 @@ export default function EventDetails() {
                 )}
 
                 {requiresPayment && !modoListaEspera ? (
-                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6 space-y-5">
+                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-4 sm:p-6 space-y-5">
                     <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
                       <CreditCard className="h-5 w-5 text-slate-400" />
                       Forma de pagamento
