@@ -70,6 +70,8 @@ export interface Event {
   liabilityTerm?: LiabilityTerm | null;
   waitlistEnabled?: boolean;
   waitlistOfferTtlHours?: number;
+  allowBelowMinimumDeposit?: boolean;
+  belowMinDepositTtlHours?: number;
 }
 
 export interface LiabilityTerm {
@@ -145,6 +147,8 @@ export interface PaymentOption {
       }>;
   // Quando true, o evento absorve a taxa de parcelamento (não repassa ao cliente).
   absorverTaxaParcelamento?: boolean;
+  // Parcelas sem juros até este número (1 = juros a partir de 2x). Ex.: 3 => juros a partir de 4x.
+  interestFreeUpToInstallments?: number;
   isActive: boolean;
 }
 
@@ -156,6 +160,14 @@ export interface CieloBrandRate {
 }
 
 export type CieloBrandRates = Record<string, CieloBrandRate>;
+
+// Taxas Cielo para o repasse no checkout: por bandeira + a taxa default GERAL
+// (fallback quando a bandeira nao e reconhecida ou nao tem taxa cadastrada).
+export interface CieloFeeRates {
+  brandRates: CieloBrandRates;
+  installmentPercent?: Record<string, number>;
+  defaultPercent?: number;
+}
 
 export interface CouponValidation {
   valido: boolean;
@@ -474,6 +486,31 @@ export const consultarPosicaoListaEspera = async (
   return response.data;
 };
 
+// ============= SOLICITAÇÃO DE ENTRADA ABAIXO DO MÍNIMO =============
+export interface DepositRequestData {
+  buyerData: Record<string, any>;
+  attendeesData: Array<{ batchId: string; data: Record<string, any> }>;
+  couponCode?: string;
+  termAcceptances?: TermAcceptance[];
+  requestedDepositAmount: number;
+}
+
+export interface DepositRequestResponse {
+  sucesso: boolean;
+  message: string;
+  orderCode: string;
+  requestedDepositAmount: number;
+}
+
+// Solicita entrar com um valor de entrada abaixo do sinal mínimo (sujeito a aprovação).
+export const solicitarEntradaAbaixoMinimo = async (
+  eventId: string,
+  data: DepositRequestData
+): Promise<DepositRequestResponse> => {
+  const response = await api.post(`/api/public/events/${eventId}/deposit-request`, data);
+  return response.data;
+};
+
 export const buscarInscricaoPorId = async (id: string): Promise<RegistrationDetails> => {
   const response = await api.get(`/registrations/${id}`);
   return response.data;
@@ -504,20 +541,24 @@ export const buscarFormasPagamento = async (eventId: string): Promise<PaymentOpt
   return response.data;
 };
 
-export const buscarTaxasCartao = async (): Promise<CieloBrandRates> => {
-  const cacheKey = 'cielo-brand-rates';
-  const cached = getCached<CieloBrandRates>(cacheKey);
+export const buscarTaxasCartao = async (): Promise<CieloFeeRates> => {
+  const cacheKey = 'cielo-fee-rates';
+  const cached = getCached<CieloFeeRates>(cacheKey);
   if (cached) {
     return cached;
   }
 
   try {
     const response = await api.get('/api/public/events/fee-config');
-    const rates = (response.data?.creditCardBrandRates || {}) as CieloBrandRates;
+    const rates: CieloFeeRates = {
+      brandRates: (response.data?.creditCardBrandRates || {}) as CieloBrandRates,
+      installmentPercent: response.data?.creditCardInstallmentPercent || {},
+      defaultPercent: Number(response.data?.creditCardDefaultPercent) || 0,
+    };
     setCache(cacheKey, rates);
     return rates;
   } catch {
-    return {};
+    return { brandRates: {} };
   }
 };
 

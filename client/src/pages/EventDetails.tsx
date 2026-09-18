@@ -24,6 +24,7 @@ import {
   validarRegrasInscricao,
   processarInscricao,
   entrarListaEspera,
+  solicitarEntradaAbaixoMinimo,
   buscarFormasPagamento,
   consultarInscricao,
   type Event,
@@ -31,7 +32,7 @@ import {
   type FormField,
   buscarTaxasCartao,
   type PaymentOption,
-  type CieloBrandRates,
+  type CieloFeeRates,
   type RegistrationResponse,
   type TermAcceptance,
 } from '@/lib/eventsApi';
@@ -239,7 +240,7 @@ export default function EventDetails() {
   const [lotes, setLotes] = useState<EventBatch[]>([]);
   const [campos, setCampos] = useState<FormField[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<PaymentOption[]>([]);
-  const [taxasCartao, setTaxasCartao] = useState<CieloBrandRates>({});
+  const [taxasCartao, setTaxasCartao] = useState<CieloFeeRates>({ brandRates: {} });
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -303,6 +304,8 @@ export default function EventDetails() {
   // ao final entra na fila em vez de gerar pagamento.
   const [modoListaEspera, setModoListaEspera] = useState(false);
   const [waitlistSuccess, setWaitlistSuccess] = useState<{ position: number; batchName?: string } | null>(null);
+  // Solicitacao de entrada abaixo do minimo (sujeito a aprovacao).
+  const [depositRequestSuccess, setDepositRequestSuccess] = useState<{ amount: number } | null>(null);
   const [cupomAberto, setCupomAberto] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const PAYMENT_STATUS_MESSAGES: Record<string, string> = {
@@ -976,12 +979,50 @@ export default function EventDetails() {
     }
   };
 
+  const handleSubmitSolicitacaoEntrada = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      if (!validarFormulario({ skipPayment: true })) return;
+      if (evento?.requiresLiabilityTerm && evento?.liabilityTerm && termAcceptances.length !== inscritos.length) {
+        setTermoOpen(true);
+        return;
+      }
+      const resultado = await solicitarEntradaAbaixoMinimo(eventId, {
+        buyerData: dadosComprador,
+        attendeesData: inscritos.map((i) => ({ batchId: i.batchId!, data: i.dados })),
+        couponCode: cupomValido ? cupomCodigo.trim() : undefined,
+        termAcceptances: evento?.requiresLiabilityTerm ? termAcceptances : undefined,
+        requestedDepositAmount: baseDepositoSemJuros,
+      });
+      if (resultado?.sucesso) {
+        setDepositRequestSuccess({ amount: baseDepositoSemJuros });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        toast.error(resultado?.message || 'Não foi possível enviar a solicitação.');
+      }
+    } catch (error: unknown) {
+      const axiosLikeError = error as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(axiosLikeError.response?.data?.message || axiosLikeError.message || 'Erro ao solicitar aprovação');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Modo lista de espera: nao cobra — entra na fila e sai.
     if (modoListaEspera) {
       await handleSubmitListaEspera();
+      return;
+    }
+
+    // Entrada abaixo do minimo: em vez de cobrar, envia solicitacao de aprovacao.
+    if (modoSolicitacaoEntrada) {
+      await handleSubmitSolicitacaoEntrada();
       return;
     }
 
@@ -1327,6 +1368,10 @@ export default function EventDetails() {
     minimoSinal > 0 &&
     baseDepositoSemJuros > 0 &&
     Math.round(baseDepositoSemJuros * 100) < Math.round(minimoSinal * 100);
+  // Evento permite pedir entrada abaixo do mínimo (sujeito a aprovação)?
+  const podeSolicitarEntrada = isBalanceDue && Boolean(evento?.allowBelowMinimumDeposit) && minimoSinal > 0;
+  // A pessoa escolheu um sinal abaixo do mínimo e o evento permite solicitar.
+  const modoSolicitacaoEntrada = podeSolicitarEntrada && sinalAbaixoMinimo;
   const cardNumberDisplay = dadosPagamento.cardNumber?.trim() || '•••• •••• •••• ••••';
   const cardHolderDisplay = dadosPagamento.cardHolder?.trim() || 'NOME COMPLETO';
   const cardExpDisplay = dadosPagamento.expirationDate?.trim() || 'MM/AAAA';
@@ -1371,6 +1416,37 @@ export default function EventDetails() {
           <Button variant="outline" onClick={() => setLocation('/eventos')} className="w-full">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar para eventos
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ──── VIEW: SUCESSO NA SOLICITAÇÃO DE ENTRADA ────
+  if (depositRequestSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+            <Clock className="h-8 w-8 text-blue-600" />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900">Solicitação enviada!</h1>
+          <div className="my-5">
+            <p className="text-sm text-slate-500">Entrada solicitada</p>
+            <p className="text-3xl font-bold text-blue-600 mt-1">
+              R$ {depositRequestSuccess.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Recebemos seu pedido para entrar com esse valor. Nossa equipe vai avaliar e, se aprovado, você recebe um
+            link por e-mail{evento?.belowMinDepositTtlHours ? ` (com prazo de ${evento.belowMinDepositTtlHours}h para pagar)` : ''}{' '}
+            para garantir sua vaga. Fique de olho no seu e-mail e WhatsApp.
+          </p>
+          <Button
+            className="w-full h-11 mt-6 font-semibold"
+            onClick={() => { setDepositRequestSuccess(null); setLocation('/eventos'); }}
+          >
+            Voltar aos eventos
           </Button>
         </div>
       </div>
@@ -2183,7 +2259,12 @@ export default function EventDetails() {
                                     placeholder={`Máx. R$ ${totalSemJuros.toFixed(2)}`}
                                     className={sinalAbaixoMinimo ? 'border-red-400 focus-visible:ring-red-400' : ''} />
                                   {minimoSinal > 0 && <p className="text-xs text-slate-400 mt-1">Mínimo: <span className="font-semibold">R$ {minimoSinal.toFixed(2)}</span></p>}
-                                  {sinalAbaixoMinimo && <p className="text-xs text-red-500 mt-1">Valor menor que o mínimo exigido.</p>}
+                                  {sinalAbaixoMinimo && !podeSolicitarEntrada && <p className="text-xs text-red-500 mt-1">Valor menor que o mínimo exigido.</p>}
+                                  {sinalAbaixoMinimo && podeSolicitarEntrada && (
+                                    <p className="text-xs text-blue-600 mt-1">
+                                      Abaixo do mínimo — você pode <strong>solicitar aprovação</strong> para entrar com esse valor.
+                                    </p>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -2480,6 +2561,12 @@ export default function EventDetails() {
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando...</>
                     ) : (
                       'Entrar na lista de espera'
+                    )
+                  ) : modoSolicitacaoEntrada ? (
+                    submitting ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando...</>
+                    ) : (
+                      `Solicitar aprovação — entrada de R$ ${baseDepositoSemJuros.toFixed(2)}`
                     )
                   ) : paymentUnavailableEffective ? (
                     !hasLotAvailable ? 'Inscrições encerradas' : 'Pagamento indisponível'

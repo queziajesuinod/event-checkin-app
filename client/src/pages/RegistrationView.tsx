@@ -16,7 +16,7 @@ import {
   listarCamposFormulario,
   consultarInscricao,
   criarPagamentoInscricao,
-  type CieloBrandRates,
+  type CieloFeeRates,
   type CreateRegistrationPaymentPayload,
   type FormField,
   type PaymentOption,
@@ -136,7 +136,7 @@ export default function RegistrationView() {
   const [method, setMethod] = useState<'pix' | 'credit_card'>('pix');
   const [amountMode, setAmountMode] = useState<'integral' | 'outro'>('integral');
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
-  const [taxasCartao, setTaxasCartao] = useState<CieloBrandRates>({});
+  const [taxasCartao, setTaxasCartao] = useState<CieloFeeRates>({ brandRates: {} });
   const [selectedPaymentOptionId, setSelectedPaymentOptionId] = useState('');
   const [loadingPaymentOptions, setLoadingPaymentOptions] = useState(false);
   const [formFields, setFormFields] = useState<FormField[]>([]);
@@ -287,7 +287,7 @@ export default function RegistrationView() {
         if (!cancelled) setTaxasCartao(rates);
       })
       .catch(() => {
-        if (!cancelled) setTaxasCartao({});
+        if (!cancelled) setTaxasCartao({ brandRates: {} });
       });
     return () => {
       cancelled = true;

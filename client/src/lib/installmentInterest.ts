@@ -1,4 +1,4 @@
-import type { PaymentOption, CieloBrandRates } from '@/lib/eventsApi';
+import type { PaymentOption, CieloFeeRates } from '@/lib/eventsApi';
 
 export type InterestType = 'percentage' | 'fixed';
 
@@ -140,12 +140,19 @@ export const getInstallmentInterestRule = (
   };
 };
 
+// Parcelas sem juros até X (1 = juros a partir de 2x).
+const getInterestFreeUpTo = (option?: PaymentOption): number => {
+  const value = Number(option?.interestFreeUpToInstallments);
+  return Number.isFinite(value) && value >= 1 ? Math.trunc(value) : 1;
+};
+
 export const applyInstallmentInterest = (
   baseAmount: number,
   option: PaymentOption | undefined,
   installments: number
 ): number => {
   const safeBase = Math.max(0, baseAmount);
+  if (installments <= getInterestFreeUpTo(option)) return safeBase;
   const rule = getInstallmentInterestRule(option, installments);
   if (rule.interestRate <= 0 || installments <= 1) return safeBase;
   if (rule.interestType === 'fixed') return safeBase + rule.interestRate;
@@ -185,20 +192,34 @@ export const detectCardBrandKey = (cardNumber: string): string => {
   return 'visa';
 };
 
-// Taxa TOTAL da Cielo (%) para bandeira/parcela; null se não configurada.
+// Taxa TOTAL da Cielo (%) para bandeira/parcela. Primeiro a taxa da bandeira; se a
+// bandeira nao for reconhecida ou nao tiver taxa, cai na TAXA DEFAULT GERAL. null se nada.
 export const getCieloInstallmentRate = (
-  brandRates: CieloBrandRates | undefined,
+  rates: CieloFeeRates | undefined,
   brandKey: string,
   installments: number
 ): number | null => {
-  if (!brandRates || !brandKey) return null;
-  const cfg = brandRates[brandKey];
-  if (!cfg) return null;
-  const map = cfg.installmentPercent || {};
-  const perInstallment = Number(map[String(installments)]);
-  if (Number.isFinite(perInstallment) && perInstallment > 0) return perInstallment;
-  const def = Number(cfg.defaultPercent);
-  return Number.isFinite(def) && def > 0 ? def : null;
+  if (!rates) return null;
+  const inst = String(installments);
+
+  // 1) Especifica da bandeira.
+  const brandRates = rates.brandRates || {};
+  const cfg = brandKey ? brandRates[brandKey] : undefined;
+  if (cfg) {
+    const map = cfg.installmentPercent || {};
+    const perInstallment = Number(map[inst]);
+    if (Number.isFinite(perInstallment) && perInstallment > 0) return perInstallment;
+    const def = Number(cfg.defaultPercent);
+    if (Number.isFinite(def) && def > 0) return def;
+  }
+
+  // 2) Fallback: taxa default geral.
+  const geralMap = rates.installmentPercent || {};
+  const geralPer = Number(geralMap[inst]);
+  if (Number.isFinite(geralPer) && geralPer > 0) return geralPer;
+  const geralDef = Number(rates.defaultPercent);
+  if (Number.isFinite(geralDef) && geralDef > 0) return geralDef;
+  return null;
 };
 
 // Total cobrado do cliente com o repasse da taxa de parcelamento (2x+), com
@@ -207,14 +228,16 @@ export const applyBrandInstallmentInterest = (
   baseAmount: number,
   option: PaymentOption | undefined,
   installments: number,
-  brandRates: CieloBrandRates | undefined,
+  rates: CieloFeeRates | undefined,
   brandKey: string
 ): number => {
   const safeBase = Math.max(0, baseAmount);
   if (!option || option.paymentType !== 'credit_card' || installments <= 1) return safeBase;
+  // Parcelas sem juros até X: quem parcela até esse limite não paga juros.
+  if (installments <= getInterestFreeUpTo(option)) return safeBase;
   if (option.absorverTaxaParcelamento) return safeBase;
 
-  const rate = getCieloInstallmentRate(brandRates, brandKey, installments);
+  const rate = getCieloInstallmentRate(rates, brandKey, installments);
   if (rate !== null && rate > 0 && rate < 100) {
     return Number((safeBase / (1 - rate / 100)).toFixed(2));
   }
@@ -227,20 +250,20 @@ export const calculateBrandInstallmentInterestAmount = (
   baseAmount: number,
   option: PaymentOption | undefined,
   installments: number,
-  brandRates: CieloBrandRates | undefined,
+  rates: CieloFeeRates | undefined,
   brandKey: string
 ): number => {
   const safeBase = Math.max(0, baseAmount);
-  const total = applyBrandInstallmentInterest(safeBase, option, installments, brandRates, brandKey);
+  const total = applyBrandInstallmentInterest(safeBase, option, installments, rates, brandKey);
   return Number(Math.max(0, total - safeBase).toFixed(2));
 };
 
 export const formatBrandInstallmentInterest = (
-  brandRates: CieloBrandRates | undefined,
+  rates: CieloFeeRates | undefined,
   brandKey: string,
   installments: number
 ): string => {
-  const rate = getCieloInstallmentRate(brandRates, brandKey, installments);
+  const rate = getCieloInstallmentRate(rates, brandKey, installments);
   if (rate === null || rate <= 0) return 'sem taxas';
   return `taxa ${rate.toFixed(2).replace('.', ',')}%`;
 };
