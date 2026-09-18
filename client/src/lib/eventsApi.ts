@@ -298,6 +298,10 @@ export interface RegistrationDetails {
   pixQrCode?: string | null;
   pixQrCodeBase64?: string | null;
   checkinQrCode?: string | null;
+  // Solicitação de entrada abaixo do mínimo: quando 'approved', o primeiro
+  // pagamento é travado no valor aprovado (approvedDepositAmount).
+  depositApprovalStatus?: 'none' | 'requested' | 'approved' | 'rejected' | null;
+  approvedDepositAmount?: string | number | null;
 }
 
 export interface CreateRegistrationPaymentPayload {

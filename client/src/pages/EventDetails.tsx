@@ -1465,11 +1465,7 @@ export default function EventDetails() {
           {waitlistSuccess.batchName && (
             <p className="text-sm text-slate-500 mt-1">Lote: {waitlistSuccess.batchName}</p>
           )}
-          <div className="my-5">
-            <p className="text-sm text-slate-500">Sua posição na fila</p>
-            <p className="text-4xl font-bold text-amber-600 mt-1">#{waitlistSuccess.position}</p>
-          </div>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm text-slate-600 leading-relaxed mt-5">
             Assim que uma vaga abrir, enviaremos um link por e-mail
             {evento?.waitlistOfferTtlHours ? ` (e você terá ${evento.waitlistOfferTtlHours}h para pagar)` : ''} para
             você garantir sua inscrição. Fique de olho no seu e-mail e WhatsApp.
@@ -1726,59 +1722,68 @@ export default function EventDetails() {
                       const qty = quantities[lote.id] || 0;
 
                       return (
-                        <div key={lote.id} className="flex items-center justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-slate-900 leading-snug">{lote.name}</p>
-                            <p
-                              className="text-sm font-bold text-primary mt-0.5"
-                              style={palette ? { color: palette.accent } : undefined}
-                            >
-                              R$ {Number(lote.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
-                            {!disponivel && (
-                              <p className={`text-xs mt-0.5 ${naoComecou ? 'text-blue-500' : 'text-red-500'}`}>
-                                {esgotado ? 'Esgotado' : naoComecou ? 'Em breve' : 'Encerrado'}
+                        <div key={lote.id} className="space-y-2.5">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-slate-900 leading-snug">{lote.name}</p>
+                              <p
+                                className="text-sm font-bold text-primary mt-0.5"
+                                style={palette ? { color: palette.accent } : undefined}
+                              >
+                                R$ {Number(lote.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </p>
+                              {!disponivel && (
+                                <p className={`text-xs mt-0.5 ${naoComecou ? 'text-blue-500' : 'text-red-500'}`}>
+                                  {esgotado ? 'Esgotado' : naoComecou ? 'Em breve' : 'Encerrado'}
+                                </p>
+                              )}
+                            </div>
+
+                            {disponivel ? (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => decrement(lote.id)}
+                                  disabled={qty === 0}
+                                  style={palette ? { backgroundColor: palette.accent, color: palette.accentText } : undefined}
+                                  className="h-8 w-8 rounded-full bg-primary text-white text-lg font-bold flex items-center justify-center hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
+                                >
+                                  −
+                                </button>
+                                <span className="w-7 text-center font-bold text-slate-900 text-sm tabular-nums">
+                                  {qty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => increment(lote.id)}
+                                  disabled={totalQty >= maxPerBuyer}
+                                  style={palette ? { backgroundColor: palette.accent, color: palette.accentText } : undefined}
+                                  className="h-8 w-8 rounded-full bg-primary text-white text-lg font-bold flex items-center justify-center hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            ) : esgotado && evento?.waitlistEnabled ? null : (
+                              <span className={`text-xs shrink-0 font-medium ${naoComecou ? 'text-blue-500' : 'text-slate-400'}`}>
+                                {naoComecou ? 'Em breve' : 'Indisponível'}
+                              </span>
                             )}
                           </div>
 
-                          {disponivel ? (
-                            <div className="flex items-center gap-1.5 shrink-0">
+                          {esgotado && evento?.waitlistEnabled && (
+                            <div>
                               <button
                                 type="button"
-                                onClick={() => decrement(lote.id)}
-                                disabled={qty === 0}
-                                style={palette ? { backgroundColor: palette.accent, color: palette.accentText } : undefined}
-                                className="h-8 w-8 rounded-full bg-primary text-white text-lg font-bold flex items-center justify-center hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
+                                onClick={() => iniciarListaEspera(lote.id)}
+                                className="w-full font-semibold rounded-lg border border-amber-300 bg-amber-100 text-amber-800 px-3 py-2.5 text-sm hover:bg-amber-200 active:bg-amber-200 transition-colors flex items-center justify-center gap-1.5"
                               >
-                                −
+                                <Clock className="h-4 w-4" />
+                                Entrar na lista de espera
                               </button>
-                              <span className="w-7 text-center font-bold text-slate-900 text-sm tabular-nums">
-                                {qty}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => increment(lote.id)}
-                                disabled={totalQty >= maxPerBuyer}
-                                style={palette ? { backgroundColor: palette.accent, color: palette.accentText } : undefined}
-                                className="h-8 w-8 rounded-full bg-primary text-white text-lg font-bold flex items-center justify-center hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
-                              >
-                                +
-                              </button>
+                              <p className="text-[11px] text-slate-500 text-center mt-1">
+                                Avisamos por e-mail e WhatsApp assim que abrir vaga.
+                              </p>
                             </div>
-                          ) : esgotado && evento?.waitlistEnabled ? (
-                            <button
-                              type="button"
-                              onClick={() => iniciarListaEspera(lote.id)}
-                              className="text-xs shrink-0 font-semibold rounded-full border border-amber-300 bg-amber-50 text-amber-700 px-3 py-1.5 hover:bg-amber-100 transition-colors flex items-center gap-1"
-                            >
-                              <Clock className="h-3.5 w-3.5" />
-                              Lista de espera
-                            </button>
-                          ) : (
-                            <span className={`text-xs shrink-0 font-medium ${naoComecou ? 'text-blue-500' : 'text-slate-400'}`}>
-                              {naoComecou ? 'Em breve' : 'Indisponível'}
-                            </span>
                           )}
                         </div>
                       );
@@ -2560,7 +2565,7 @@ export default function EventDetails() {
                     submitting ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando...</>
                     ) : (
-                      'Entrar na lista de espera'
+                      <><Clock className="h-4 w-4 mr-2" />Confirmar entrada na lista de espera</>
                     )
                   ) : modoSolicitacaoEntrada ? (
                     submitting ? (

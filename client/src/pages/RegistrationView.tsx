@@ -359,6 +359,16 @@ export default function RegistrationView() {
   }, [sortedPayments]);
   const remainingSemJuros = Math.max(0, (Number(registration?.finalPrice) || 0) - paidSemJuros);
 
+  // Entrada abaixo do mínimo APROVADA: a primeira cobrança (ainda sem nenhum
+  // pagamento confirmado) é travada no valor aprovado — sem campo aberto. Os
+  // próximos pagamentos (saldo restante) seguem o fluxo normal (integral/outro).
+  const approvedDeposit = Number(registration?.approvedDepositAmount) || 0;
+  const isApprovedDepositEntry =
+    registration?.depositApprovalStatus === 'approved' &&
+    approvedDeposit > 0 &&
+    paidSemJuros <= 0;
+  const approvedDepositCapped = Math.min(approvedDeposit, remainingSemJuros);
+
   // Nome do primeiro inscrito
   const nomeInscrito = registration?.attendees?.[0]?.attendeeData?.nome_completo ?? null;
 
@@ -439,12 +449,19 @@ export default function RegistrationView() {
   const cardExpDisplay = cardData.expirationDate?.trim() || 'MM/AAAA';
   const cardCvvDisplay = cardData.securityCode?.trim() || '•••';
 
+  // Entrada aprovada: trava a primeira cobrança no valor aprovado.
+  useEffect(() => {
+    if (isApprovedDepositEntry) {
+      setAmount(formatNumberInput(approvedDepositCapped));
+    }
+  }, [isApprovedDepositEntry, approvedDepositCapped]);
+
   // No modo "valor integral" mantém o campo sincronizado com o saldo restante
   useEffect(() => {
-    if (amountMode === 'integral') {
+    if (!isApprovedDepositEntry && amountMode === 'integral') {
       setAmount(formatNumberInput(remainingSemJuros));
     }
-  }, [amountMode, remainingSemJuros]);
+  }, [amountMode, remainingSemJuros, isApprovedDepositEntry]);
 
   useEffect(() => {
     if (method === 'credit_card' && installments > maxInstallments) {
@@ -860,6 +877,18 @@ export default function RegistrationView() {
                   )}
 
                   {/* Quanto pagar agora — valor integral ou outro valor */}
+                  {isApprovedDepositEntry ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Entrada aprovada</p>
+                      <div className="flex items-center justify-between rounded-xl border border-primary bg-primary/5 px-4 py-3">
+                        <div>
+                          <p className="font-medium text-slate-800">Valor aprovado</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Este é o valor da sua entrada. O saldo restante fica para os próximos pagamentos.</p>
+                        </div>
+                        <span className="ml-4 shrink-0 font-bold text-primary">{formatCurrency(approvedDepositCapped)}</span>
+                      </div>
+                    </div>
+                  ) : (
                   <div className="space-y-3">
                     <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Quanto pagar agora?</p>
                     <div className="flex flex-col gap-2">
@@ -907,6 +936,7 @@ export default function RegistrationView() {
                       )}
                     </div>
                   </div>
+                  )}
 
                   {/* Parcelas (cartão) */}
                   {showCreditCardFields && selectedPaymentOption && maxInstallments > 1 && (
