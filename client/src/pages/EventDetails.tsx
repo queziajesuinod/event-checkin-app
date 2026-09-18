@@ -2254,10 +2254,10 @@ export default function EventDetails() {
                               </button>
                               {modoSinal === 'outro' && (
                                 <div className="pt-1">
-                                  <Input type="number" min={minimoSinal > 0 ? minimoSinal : 0.01} step="0.01" max={totalSemJuros}
+                                  <Input type="number" min={(minimoSinal > 0 && !podeSolicitarEntrada) ? minimoSinal : 0.01} step="0.01" max={totalSemJuros}
                                     value={valorOutro} onChange={(e) => setValorOutro(e.target.value)}
                                     placeholder={`Máx. R$ ${totalSemJuros.toFixed(2)}`}
-                                    className={sinalAbaixoMinimo ? 'border-red-400 focus-visible:ring-red-400' : ''} />
+                                    className={(sinalAbaixoMinimo && !podeSolicitarEntrada) ? 'border-red-400 focus-visible:ring-red-400' : ''} />
                                   {minimoSinal > 0 && <p className="text-xs text-slate-400 mt-1">Mínimo: <span className="font-semibold">R$ {minimoSinal.toFixed(2)}</span></p>}
                                   {sinalAbaixoMinimo && !podeSolicitarEntrada && <p className="text-xs text-red-500 mt-1">Valor menor que o mínimo exigido.</p>}
                                   {sinalAbaixoMinimo && podeSolicitarEntrada && (
