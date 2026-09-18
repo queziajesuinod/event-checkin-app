@@ -4,6 +4,7 @@ import { eventsAPI, type EventSummary } from '@/lib/api';
 import { Calendar, ChevronRight, Download, Loader2, MapPin, Users, Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
+import { formatEventDate, formatEventTime } from '../lib/eventDateTime';
 
 const EVENTS_CACHE_KEY = 'events:offline:list';
 const MAX_OFFLINE_IMAGE_CHARS = 120000;
@@ -333,23 +334,23 @@ export default function Events() {
       return null;
     }
 
-    const start = new Date(startRaw);
-    if (Number.isNaN(start.getTime())) {
+    const startDate = formatEventDate(startRaw);
+    if (!startDate) {
       return null;
     }
 
     if (endRaw) {
-      const end = new Date(endRaw);
-      if (!Number.isNaN(end.getTime())) {
-        const sameDay = start.toDateString() === end.toDateString();
+      const endDate = formatEventDate(endRaw);
+      if (endDate) {
+        const sameDay = startDate === endDate;
         if (sameDay) {
-          return `${start.toLocaleDateString('pt-BR')} ${start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+          return `${startDate} ${formatEventTime(startRaw)} - ${formatEventTime(endRaw)}`;
         }
-        return `${start.toLocaleDateString('pt-BR')} - ${end.toLocaleDateString('pt-BR')}`;
+        return `${startDate} - ${endDate}`;
       }
     }
 
-    return start.toLocaleDateString('pt-BR');
+    return startDate;
   };
 
   const [offlineExpanded, setOfflineExpanded] = useState(false);

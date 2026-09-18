@@ -6,6 +6,7 @@ import { Calendar, MapPin, Users, Download, Loader2, CheckCircle2, XCircle, File
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
+import { formatEventDate, formatEventDateTime } from '../lib/eventDateTime';
 
 interface Registration {
   id: string;
@@ -51,53 +52,8 @@ const EVENT_DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   minute: '2-digit',
 };
 
-const BRAZILIAN_DATE_REGEX =
-  /^(\d{2})\/(\d{2})\/(\d{4})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
-
-const parseEventDateString = (value?: string | null): Date | null => {
-  if (!value) return null;
-
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const brazilMatch = BRAZILIAN_DATE_REGEX.exec(trimmed);
-  if (brazilMatch) {
-    const [, day, month, year, hour, minute, second] = brazilMatch;
-    const parsed = new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour ?? '0'),
-      Number(minute ?? '0'),
-      Number(second ?? '0')
-    );
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
-
-  const firstSpaceIndex = trimmed.indexOf(' ');
-  const normalized =
-    firstSpaceIndex > -1 && !trimmed.includes('T')
-      ? `${trimmed.substring(0, firstSpaceIndex)}T${trimmed.substring(
-          firstSpaceIndex + 1
-        )}`
-      : trimmed;
-  const withTimezone = normalized.replace(/\s+([+-]\d{2}:\d{2})$/, '$1');
-
-  const isoParsed = new Date(withTimezone);
-  if (!Number.isNaN(isoParsed.getTime())) {
-    return isoParsed;
-  }
-
-  const fallbackTimestamp = Date.parse(trimmed);
-  if (!Number.isNaN(fallbackTimestamp)) {
-    return new Date(fallbackTimestamp);
-  }
-
-  return null;
-};
-
+// Datas de evento sempre no fuso de Campo Grande (UTC-4), independente do
+// navegador — 19:20 cadastrado aparece 19:20 em qualquer dispositivo.
 const formatEventDateLabel = (event: Registration['event']) => {
   const rawDate =
     event.eventDate?.trim() ||
@@ -106,29 +62,23 @@ const formatEventDateLabel = (event: Registration['event']) => {
   if (!rawDate) {
     return 'Data indisponível';
   }
-  const parsed = parseEventDateString(rawDate);
-  if (parsed) {
-    return parsed.toLocaleDateString('pt-BR', EVENT_DATE_FORMAT_OPTIONS);
-  }
-  return rawDate;
+  return formatEventDateTime(rawDate, EVENT_DATE_FORMAT_OPTIONS) || rawDate;
 };
 
 const formatEventDateRange = (event: Registration['event']) => {
-  const startDate = parseEventDateString(event.startDate);
-  const endDate = parseEventDateString(event.eventDate);
+  const start = formatEventDate(event.startDate);
+  const end = formatEventDate(event.eventDate);
 
-  if (startDate && endDate) {
-    const start = startDate.toLocaleDateString('pt-BR');
-    const end = endDate.toLocaleDateString('pt-BR');
+  if (start && end) {
     return `${start} a ${end}`;
   }
 
-  if (startDate) {
-    return startDate.toLocaleDateString('pt-BR');
+  if (start) {
+    return start;
   }
 
-  if (endDate) {
-    return endDate.toLocaleDateString('pt-BR');
+  if (end) {
+    return end;
   }
 
   return formatEventDateLabel(event);

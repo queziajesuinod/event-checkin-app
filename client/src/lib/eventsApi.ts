@@ -59,6 +59,9 @@ export interface Event {
   requiresPayment?: boolean;
   registrationPaymentMode?: 'SINGLE' | 'BALANCE_DUE';
   depositAmount?: number;
+  // Nome real da coluna no backend (DECIMAL -> string no JSON). Normalizado
+  // para `depositAmount` numérico em buscarEventoPublico.
+  minDepositAmount?: number | string | null;
   eventType?: string;
   city?: string;
   neighborhood?: string;
@@ -333,9 +336,24 @@ export const buscarEventoPublico = async (id: string): Promise<Event> => {
   
   // Se não tem cache, buscar da API
   const response = await api.get(`/api/public/events/${id}`);
-  setCache(cacheKey, response.data);
-  
-  return response.data;
+  const data = normalizarEventoPublico(response.data);
+  setCache(cacheKey, data);
+
+  return data;
+};
+
+// O backend expõe o sinal mínimo como `minDepositAmount` (DECIMAL -> string no
+// JSON). O restante do app lê `depositAmount` numérico — normaliza aqui para
+// não depender do nome/tipo do campo em cada tela.
+const normalizarEventoPublico = (evento: Event): Event => {
+  if (!evento) return evento;
+  if (evento.depositAmount == null && evento.minDepositAmount != null) {
+    const n = Number(evento.minDepositAmount);
+    if (!Number.isNaN(n)) {
+      return { ...evento, depositAmount: n };
+    }
+  }
+  return evento;
 };
 
 // Listar lotes de um evento
