@@ -84,7 +84,14 @@ export default function Home() {
   const perfis = (user?.perfis ?? []).map((p) => p.toLowerCase());
   const permissoes = (user?.permissoes ?? []).map((p) => p.toUpperCase());
   const isAdmin = perfis.some((p) => p === "administrador" || p === "admin");
-  const showEventos = isAdmin || perfis.includes("eventos");
+  const showEventos =
+    isAdmin ||
+    perfis.includes("eventos") ||
+    perfis.includes("coordenador") ||
+    permissoes.includes("EVENTS_ACESS") ||
+    permissoes.includes("EVENTS_ACCESS") ||
+    permissoes.includes("EVENTS_VIEW_ALL") ||
+    permissoes.includes("EVENTS_COORDINATOR_MANAGE");
   const showCultos = isAdmin || perfis.includes("backstage");
   const showCelula =
     isAdmin ||
