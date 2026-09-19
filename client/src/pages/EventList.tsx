@@ -3,10 +3,12 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Search, Tag, X, ChevronRight } from 'lucide-react';
 import { listarEventosPublicos, listarLotesPublicos, type Event } from '@/lib/eventsApi';
-import { getActiveBatches, sumAvailableSeats } from '@/lib/eventUtils';
+import { getActiveBatches, hasUpcomingBatch, sumAvailableSeats } from '@/lib/eventUtils';
 
 type BatchAvailability = {
   hasActiveBatch: boolean;
+  hasFutureBatch: boolean;
+  hasAnyBatch: boolean;
   availableSeats: number | null;
   activeBatchNames: string[];
 };
@@ -211,13 +213,50 @@ export default function EventList() {
     return !!fim && !Number.isNaN(fim.getTime()) && fim.getTime() < Date.now();
   };
 
+  const eventoEsgotado = (evento: Event) => {
+    const vagas = calcularVagasDisponiveis(evento);
+    return vagas !== null && vagas <= 0;
+  };
+
+  // Inscrição ainda vai abrir (existe lote com janela começando no futuro).
+  const inscricaoVaiAbrir = (evento: Event) =>
+    Boolean(batchAvailability[evento.id]?.hasFutureBatch);
+
+  // Evento sem nenhum lote cadastrado ainda — conta como "em breve" (Próximos),
+  // pois a inscrição ainda pode ser configurada.
+  const semLoteCadastrado = (evento: Event) => {
+    const availability = batchAvailability[evento.id];
+    return availability ? !availability.hasAnyBatch : false;
+  };
+
   const eventosAbertos = useMemo(
     () => eventosFiltrados.filter(eventoEstaAberto),
     [eventosFiltrados, batchAvailability, loadingBatchAvailability]
   );
-  // Próximos: inscrição ainda não aberta, mas o evento é futuro
+  // Próximos (em breve): inscrição ainda NÃO abriu, mas vai abrir — seja porque há
+  // lote com início no futuro, seja porque ainda não há lote cadastrado. Evento
+  // futuro e não esgotado.
   const eventosProximos = useMemo(
-    () => eventosFiltrados.filter((e) => !eventoEstaAberto(e) && !eventoJaPassou(e)),
+    () =>
+      eventosFiltrados.filter(
+        (e) =>
+          !eventoEstaAberto(e) &&
+          !eventoJaPassou(e) &&
+          !eventoEsgotado(e) &&
+          (inscricaoVaiAbrir(e) || semLoteCadastrado(e))
+      ),
+    [eventosFiltrados, batchAvailability, loadingBatchAvailability]
+  );
+  // Inscrições fechadas: evento ainda vai acontecer, mas está esgotado ou já tem
+  // lote cadastrado cuja janela de inscrição encerrou (não vai reabrir).
+  const eventosIndisponiveis = useMemo(
+    () =>
+      eventosFiltrados.filter(
+        (e) =>
+          !eventoEstaAberto(e) &&
+          !eventoJaPassou(e) &&
+          (eventoEsgotado(e) || (!inscricaoVaiAbrir(e) && !semLoteCadastrado(e)))
+      ),
     [eventosFiltrados, batchAvailability, loadingBatchAvailability]
   );
   // Encerrados: só os que já aconteceram
@@ -247,6 +286,8 @@ export default function EventList() {
           return {
             id: evento.id,
             hasActiveBatch: activeBatches.length > 0,
+            hasFutureBatch: hasUpcomingBatch(lotes, hoje),
+            hasAnyBatch: lotes.length > 0,
             availableSeats: sumAvailableSeats(activeBatches),
             activeBatchNames: activeBatches.map((batch) => batch.name).filter(Boolean),
           };
@@ -255,6 +296,8 @@ export default function EventList() {
           return {
             id: evento.id,
             hasActiveBatch: false,
+            hasFutureBatch: false,
+            hasAnyBatch: false,
             availableSeats: null,
             activeBatchNames: [],
           };
@@ -266,6 +309,8 @@ export default function EventList() {
     availabilityEntries.forEach((entry) => {
       availabilityByEvent[entry.id] = {
         hasActiveBatch: entry.hasActiveBatch,
+        hasFutureBatch: entry.hasFutureBatch,
+        hasAnyBatch: entry.hasAnyBatch,
         availableSeats: entry.availableSeats,
         activeBatchNames: entry.activeBatchNames,
       };
@@ -350,8 +395,13 @@ export default function EventList() {
     return evento.maxRegistrations - evento.currentRegistrations;
   };
 
-  const renderCard = (evento: Event, index = 0, kind: 'open' | 'upcoming' | 'past' = 'open') => {
+  const renderCard = (
+    evento: Event,
+    index = 0,
+    kind: 'open' | 'upcoming' | 'closed' | 'past' = 'open'
+  ) => {
     const isUpcoming = kind === 'upcoming';
+    const isClosed = kind === 'closed';
     const isPast = kind === 'past';
     const vagasDisponiveis = calcularVagasDisponiveis(evento);
     const esgotado = vagasDisponiveis !== null && vagasDisponiveis <= 0;
@@ -364,18 +414,24 @@ export default function EventList() {
     const podeIrListaEspera = !isPast && esgotado && Boolean(evento.waitlistEnabled);
     const podeIrDetalhes = isUpcoming
       ? true
-      : podeIrListaEspera || (!isPast && !availabilityLoading && possuiLoteAtivo && !esgotado);
+      : isClosed
+        ? podeIrListaEspera
+        : podeIrListaEspera || (!isPast && !availabilityLoading && possuiLoteAtivo && !esgotado);
     const botaoLabel = isPast
       ? 'Encerrado'
       : isUpcoming
         ? 'Ver detalhes'
-        : availabilityLoading
-          ? 'Verificando...'
-          : esgotado
+        : isClosed
+          ? esgotado
             ? (evento.waitlistEnabled ? 'Entrar na lista de espera' : 'Esgotado')
-            : possuiLoteAtivo
-              ? 'Ver detalhes'
-              : 'Encerrado';
+            : 'Inscrições encerradas'
+          : availabilityLoading
+            ? 'Verificando...'
+            : esgotado
+              ? (evento.waitlistEnabled ? 'Entrar na lista de espera' : 'Esgotado')
+              : possuiLoteAtivo
+                ? 'Ver detalhes'
+                : 'Encerrado';
 
     return (
       <div
@@ -428,6 +484,13 @@ export default function EventList() {
               Em breve
             </span>
           )}
+
+          {/* Selo "Inscrições encerradas" (fechadas mas não esgotadas — esgotado já tem overlay) */}
+          {isClosed && !esgotado && (
+            <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-slate-700/90 backdrop-blur-sm text-white text-[11px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full">
+              Inscrições encerradas
+            </span>
+          )}
         </div>
 
         <div className="flex flex-col flex-1 p-5 gap-3">
@@ -470,7 +533,7 @@ export default function EventList() {
               onClick={() => setLocation(`/eventos/${evento.id}`)}
               disabled={!podeIrDetalhes}
               className="w-full"
-              variant={isPast ? 'secondary' : isUpcoming ? 'outline' : 'default'}
+              variant={isPast || isClosed ? 'secondary' : isUpcoming ? 'outline' : 'default'}
             >
               {botaoLabel}
             </Button>
@@ -643,6 +706,22 @@ export default function EventList() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {eventosProximos.map((e, i) => renderCard(e, i, 'upcoming'))}
+                </div>
+              </section>
+            )}
+
+            {/* Inscrições fechadas: esgotados ou com inscrição encerrada (evento futuro) */}
+            {eventosIndisponiveis.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2.5 mb-4">
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  <h2 className="text-lg font-bold text-slate-900">Inscrições fechadas</h2>
+                  <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+                    {eventosIndisponiveis.length}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {eventosIndisponiveis.map((e, i) => renderCard(e, i, 'closed'))}
                 </div>
               </section>
             )}

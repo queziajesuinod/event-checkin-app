@@ -23,6 +23,26 @@ export const isBatchActiveNow = (batch: EventBatch, referenceDate = new Date()) 
 export const hasActiveBatchNow = (batches: EventBatch[], referenceDate = new Date()) =>
   batches.some((batch) => isBatchActiveNow(batch, referenceDate));
 
+// Lote cuja janela de inscrição ainda vai abrir (começa no futuro) e que tem vaga.
+// Serve para separar "Próximos eventos" (inscrição vai abrir) de "Inscrições
+// fechadas" (esgotado ou janela já encerrada).
+export const isBatchUpcoming = (batch: EventBatch, referenceDate = new Date()) => {
+  if (!batch.isActive) return false;
+
+  const startDate = parseDate(batch.startDate);
+  const endDate = parseDate(batch.endDate);
+  if (!startDate || !endDate) return false;
+
+  if (referenceDate >= startDate) return false; // já começou (ou já passou)
+  if (referenceDate > endDate) return false; // janela já encerrou
+
+  const seatsAvailable = getBatchAvailableSeats(batch);
+  return seatsAvailable === null || seatsAvailable > 0;
+};
+
+export const hasUpcomingBatch = (batches: EventBatch[], referenceDate = new Date()) =>
+  batches.some((batch) => isBatchUpcoming(batch, referenceDate));
+
 export const getBatchAvailableSeats = (batch: EventBatch) => {
   if (typeof batch.vagasDisponiveis === 'number') {
     return batch.vagasDisponiveis;
