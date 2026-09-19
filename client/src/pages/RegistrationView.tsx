@@ -35,6 +35,7 @@ import {
   formatInstallmentInterest,
   getCieloInstallmentRate,
   getInstallmentInterestRule,
+  isInstallmentInterestFree,
 } from '@/lib/installmentInterest';
 
 const normalizeStatus = (status?: string | null) =>
@@ -958,8 +959,7 @@ export default function RegistrationView() {
                             const perInstallment = option > 0 ? totalParcelado / option : totalParcelado;
                             const taxaParcela = getCieloInstallmentRate(taxasCartao, bandeiraParaCalculo, option);
                             const semTaxas =
-                              selectedPaymentOption.absorverTaxaParcelamento ||
-                              option === 1 ||
+                              isInstallmentInterestFree(selectedPaymentOption, option) ||
                               taxaParcela === null ||
                               taxaParcela <= 0;
                             return (
@@ -967,16 +967,16 @@ export default function RegistrationView() {
                                 {option}x de {formatCurrency(perInstallment)}
                                 {semTaxas
                                   ? ' sem taxas'
-                                  : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, option)})`}
+                                  : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, option, selectedPaymentOption)})`}
                               </SelectItem>
                             );
                           })}
                         </SelectContent>
                       </Select>
-                      {!selectedPaymentOption.absorverTaxaParcelamento && (
+                      {!selectedPaymentOption.absorverTaxaParcelamento && !isInstallmentInterestFree(selectedPaymentOption, installments) && (
                         <p className="text-xs text-muted-foreground">
                           Taxa de parcelamento repassada:{' '}
-                          {formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, installments)}
+                          {formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, installments, selectedPaymentOption)}
                         </p>
                       )}
                     </div>

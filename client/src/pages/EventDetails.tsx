@@ -45,6 +45,7 @@ import {
   formatBrandInstallmentInterest,
   detectCardBrandKey,
   getCieloInstallmentRate,
+  isInstallmentInterestFree,
 } from '@/lib/installmentInterest';
 import { getCieloDeniedMessage } from '@/lib/paymentDenialReason';
 import { translatePaymentError } from '@/lib/paymentErrorMessages';
@@ -1856,8 +1857,11 @@ export default function EventDetails() {
         )}
       </div>
 
-      {/* Topbar */}
-      <div className="border-b border-white/10 px-4 py-3 sticky top-0 z-20 bg-slate-900/30 backdrop-blur-md">
+      {/* Topbar — tingido com a paleta da imagem do evento (fallback slate). */}
+      <div
+        className="border-b border-white/10 px-4 py-3 sticky top-0 z-20 bg-slate-900/30 backdrop-blur-md"
+        style={palette ? { backgroundColor: palette.overlayStrong } : undefined}
+      >
         <div className="container max-w-6xl mx-auto flex items-center justify-between gap-3">
           <button
             type="button"
@@ -1877,14 +1881,23 @@ export default function EventDetails() {
           {/* Stepper inline no topo */}
           <div className="flex items-center gap-2 text-xs font-medium shrink-0">
             <div className={`flex items-center gap-1.5 ${step >= 1 ? 'text-white' : 'text-white/40'}`}>
-              <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step > 1 ? 'bg-primary text-white' : step === 1 ? 'bg-primary text-white ring-2 ring-white/30' : 'bg-white/20 text-white/60'}`}>
+              <div
+                className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step > 1 ? 'bg-primary text-white' : step === 1 ? 'bg-primary text-white ring-2 ring-white/30' : 'bg-white/20 text-white/60'}`}
+                style={palette ? { backgroundColor: palette.accent, color: palette.accentText } : undefined}
+              >
                 {step > 1 ? <Check className="h-3 w-3" /> : '1'}
               </div>
               Inscrição
             </div>
-            <div className={`h-px w-6 ${step >= 2 ? 'bg-primary' : 'bg-white/20'}`} />
+            <div
+              className={`h-px w-6 ${step >= 2 ? 'bg-primary' : 'bg-white/20'}`}
+              style={palette && step >= 2 ? { backgroundColor: palette.accent } : undefined}
+            />
             <div className={`flex items-center gap-1.5 ${step >= 2 ? 'text-white' : 'text-white/40'}`}>
-              <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 2 ? 'bg-primary text-white ring-2 ring-white/30' : 'bg-white/20 text-white/60'}`}>
+              <div
+                className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 2 ? 'bg-primary text-white ring-2 ring-white/30' : 'bg-white/20 text-white/60'}`}
+                style={palette && step === 2 ? { backgroundColor: palette.accent, color: palette.accentText } : undefined}
+              >
                 2
               </div>
               {requiresPayment ? 'Pagamento' : 'Confirmação'}
@@ -2290,11 +2303,11 @@ export default function EventDetails() {
                                   const totalParcelado = applyBrandInstallmentInterest(baseCalculo, selectedPaymentOption, p, taxasCartao, bandeiraParaCalculo);
                                   const valorParcela = totalParcelado / p;
                                   const taxaParcela = getCieloInstallmentRate(taxasCartao, bandeiraParaCalculo, p);
-                                  const semTaxas = !selectedPaymentOption || selectedPaymentOption.absorverTaxaParcelamento || p === 1 || taxaParcela === null || taxaParcela <= 0;
+                                  const semTaxas = !selectedPaymentOption || isInstallmentInterestFree(selectedPaymentOption, p) || taxaParcela === null || taxaParcela <= 0;
                                   return (
                                     <SelectItem key={p} value={p.toString()}>
                                       {p}x de R$ {valorParcela.toFixed(2)}
-                                      {semTaxas ? ' sem taxas' : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, p)})`}
+                                      {semTaxas ? ' sem taxas' : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, p, selectedPaymentOption)})`}
                                     </SelectItem>
                                   );
                                 })}

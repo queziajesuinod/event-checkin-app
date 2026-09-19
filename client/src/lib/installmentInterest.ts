@@ -146,6 +146,18 @@ const getInterestFreeUpTo = (option?: PaymentOption): number => {
   return Number.isFinite(value) && value >= 1 ? Math.trunc(value) : 1;
 };
 
+// Esta parcela é realmente SEM juros? Considera 1x, a opção que absorve a taxa e o
+// "juros só a partir da X parcela" (interestFreeUpToInstallments). Usado para NÃO
+// exibir taxa em parcelas que de fato não cobram juros.
+export const isInstallmentInterestFree = (
+  option: PaymentOption | undefined,
+  installments: number
+): boolean => {
+  if (installments <= 1) return true;
+  if (option?.absorverTaxaParcelamento) return true;
+  return installments <= getInterestFreeUpTo(option);
+};
+
 export const applyInstallmentInterest = (
   baseAmount: number,
   option: PaymentOption | undefined,
@@ -261,8 +273,12 @@ export const calculateBrandInstallmentInterestAmount = (
 export const formatBrandInstallmentInterest = (
   rates: CieloFeeRates | undefined,
   brandKey: string,
-  installments: number
+  installments: number,
+  option?: PaymentOption
 ): string => {
+  // Parcela sem juros de fato (1x, absorve taxa, ou dentro do "juros a partir da X"):
+  // não mostra taxa, mesmo que exista uma taxa cadastrada para essa parcela.
+  if (option && isInstallmentInterestFree(option, installments)) return 'sem taxas';
   const rate = getCieloInstallmentRate(rates, brandKey, installments);
   if (rate === null || rate <= 0) return 'sem taxas';
   return `taxa ${rate.toFixed(2).replace('.', ',')}%`;
