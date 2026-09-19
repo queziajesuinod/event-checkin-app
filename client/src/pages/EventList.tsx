@@ -214,7 +214,11 @@ export default function EventList() {
   };
 
   const eventoEsgotado = (evento: Event) => {
-    const vagas = calcularVagasDisponiveis(evento);
+    // Cálculo inline (não usar calcularVagasDisponiveis, que é declarada mais
+    // abaixo — chamá-la aqui dispararia TDZ dentro dos useMemo de classificação).
+    const vagas = evento.maxRegistrations
+      ? evento.maxRegistrations - evento.currentRegistrations
+      : null;
     return vagas !== null && vagas <= 0;
   };
 
