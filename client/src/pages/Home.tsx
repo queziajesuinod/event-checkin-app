@@ -87,11 +87,13 @@ export default function Home() {
   const showEventos =
     isAdmin ||
     perfis.includes("eventos") ||
-    perfis.includes("coordenador") ||
+    perfis.includes("coordenador_evento") ||
+    perfis.includes("colaborador_evento") ||
     permissoes.includes("EVENTS_ACESS") ||
     permissoes.includes("EVENTS_ACCESS") ||
     permissoes.includes("EVENTS_VIEW_ALL") ||
-    permissoes.includes("EVENTS_COORDINATOR_MANAGE");
+    permissoes.includes("EVENTS_COORDINATOR_MANAGE") ||
+    permissoes.includes("EVENTS_CHECKIN");
   const showCultos = isAdmin || perfis.includes("backstage");
   const showCelula =
     isAdmin ||

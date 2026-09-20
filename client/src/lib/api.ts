@@ -231,8 +231,10 @@ export const authAPI = {
 };
 
 export const eventsAPI = {
-  list: () => api.get<EventSummary[]>("/api/admin/events"),
-  getById: (id: string) => api.get(`/api/admin/events/${id}`),
+  // Endpoints de check-in: aceitam coordenador (EVENTS_ACESS) e colaborador
+  // (EVENTS_CHECKIN), sem exigir acesso ao módulo de eventos do portal.
+  list: () => api.get<EventSummary[]>("/api/admin/checkin/events"),
+  getById: (id: string) => api.get(`/api/admin/checkin/events/${id}`),
   getTicketsSummary: (eventId: string) => api.get(`/api/admin/events/${eventId}/tickets-summary`),
 };
 
