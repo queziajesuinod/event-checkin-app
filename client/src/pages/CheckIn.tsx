@@ -1,6 +1,9 @@
 import { Input } from '@/components/ui/input';
 import { useHeader } from '@/contexts/HeaderContext';
 import api, { checkInAPI, eventsAPI } from '@/lib/api';
+import { buscarModeloEtiqueta, buscarIngressosPublico } from '@/lib/eventsApi';
+import { LabelSheet, type LabelRenderItem } from '@/components/LabelSheet';
+import type { LabelTemplateResponse } from '@/lib/eventsApi';
 import axios from 'axios';
 import {
   AlertCircle,
@@ -9,6 +12,7 @@ import {
   Download,
   Loader2,
   MapPin,
+  Printer,
   QrCode,
   ScanLine,
   Trash2,
@@ -493,6 +497,7 @@ export default function CheckIn() {
   const [isLoadingManualAttendees, setIsLoadingManualAttendees] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
+  const [labelPrint, setLabelPrint] = useState<{ template: LabelTemplateResponse['template']; items: LabelRenderItem[] } | null>(null);
   const [error, setError] = useState('');
   const [eventTitle, setEventTitle] = useState('Evento');
   const [eventLocation, setEventLocation] = useState('');
@@ -1068,6 +1073,46 @@ export default function CheckIn() {
     });
   };
 
+  // Monta a etiqueta do inscrito e prepara a impressão (usa o modelo ativo do evento).
+  const prepararEtiquetaCheckIn = async (
+    labelEventId: string,
+    orderCode?: string,
+    attendeeId?: string,
+    fallbackName?: string,
+  ) => {
+    try {
+      const [tplResp, registros] = await Promise.all([
+        buscarModeloEtiqueta(labelEventId),
+        orderCode ? buscarIngressosPublico(orderCode) : Promise.resolve([]),
+      ]);
+      if (!tplResp?.template) return; // evento sem modelo — não imprime
+      let name = fallbackName || '';
+      let sector = '';
+      let batchName = '';
+      const reg = registros.find((r) => r.orderCode === orderCode);
+      const att = reg?.attendees.find((a) => a.id === attendeeId);
+      if (att) {
+        name = att.name || name;
+        sector = att.batch?.sector || '';
+        batchName = att.batch?.name || '';
+      }
+      const item: LabelRenderItem = {
+        key: `${orderCode || 'checkin'}-${attendeeId || '0'}`,
+        attendeeName: name,
+        sector,
+        batchName,
+        eventTitle: tplResp.event.title,
+        orderCode: orderCode || '',
+        attendeeId: attendeeId || '',
+        eventId: labelEventId,
+        eventImage: tplResp.event.imageUrl || null,
+      };
+      setLabelPrint({ template: tplResp.template, items: [item] });
+    } catch {
+      /* falha ao preparar etiqueta não bloqueia o check-in */
+    }
+  };
+
   const handleCheckIn = async (
     code: string,
     options?: {
@@ -1121,6 +1166,10 @@ export default function CheckIn() {
         scheduleName?: string;
         checkInAtLabel?: string;
         method?: string;
+        printLabel?: boolean;
+        eventId?: string;
+        orderCode?: string;
+        attendeeId?: string;
       };
 
       setResult({
@@ -1131,6 +1180,12 @@ export default function CheckIn() {
         checkInAtLabel: data.checkInAtLabel,
         method: data.method,
       });
+
+      // Impressão de etiqueta se o agendamento estiver configurado para isso
+      setLabelPrint(null);
+      if (data.printLabel && data.eventId) {
+        void prepararEtiquetaCheckIn(data.eventId, data.orderCode, data.attendeeId, data.attendee?.name);
+      }
 
       await loadStats();
       if (hasOfflineCache) {
@@ -1144,6 +1199,7 @@ export default function CheckIn() {
       setTimeout(() => {
         setResult(null);
         setMethod(null);
+        setLabelPrint(null);
       }, 4000);
     } catch (err) {
       const shouldQueueOffline =
@@ -1653,8 +1709,22 @@ export default function CheckIn() {
                   </p>
                 )}
               </div>
+              {labelPrint && (
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-800"
+                >
+                  <Printer className="h-3.5 w-3.5" /> Imprimir etiqueta
+                </button>
+              )}
             </div>
           </div>
+        )}
+
+        {/* Etiqueta do check-in — imprime automático (page-break por inscrito) */}
+        {labelPrint && (
+          <LabelSheet template={labelPrint.template} items={labelPrint.items} screenHidden autoPrint />
         )}
 
         {/* ── Feedback de erro ── */}

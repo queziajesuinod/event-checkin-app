@@ -7,6 +7,18 @@ import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import { formatEventDate, formatEventDateTime } from '../lib/eventDateTime';
+import { UpgradeSectorDialog } from '@/components/UpgradeSectorDialog';
+import { ArrowUpRight, Pencil } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { editarNomeInscrito } from '@/lib/eventsApi';
 
 interface Registration {
   id: string;
@@ -19,6 +31,7 @@ interface Registration {
     eventDate?: string | null;
     startDate?: string | null;
     location: string;
+    sectorUpgradeEnabled?: boolean;
   };
   attendees: Array<{
     id: string;
@@ -148,6 +161,10 @@ export default function Ticket() {
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [attendeeQRCodes, setAttendeeQRCodes] = useState<Record<string, string>>({});
   const [eventImageDataUrl, setEventImageDataUrl] = useState<string | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [editAttendee, setEditAttendee] = useState<{ id: string; name: string } | null>(null);
+  const [editNome, setEditNome] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const loadRegistration = useCallback(async (orderCode: string) => {
     try {
@@ -644,27 +661,52 @@ export default function Ticket() {
                 <h3 className="font-semibold">Inscritos</h3>
               </div>
               <div className="space-y-2">
-                {registration.attendees.map((attendee, index) => (
-                  <div key={attendee.id} className="bg-muted/50 p-3 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">
-                          {attendee.attendeeData.nome_completo ||
-                            attendee.attendeeData.nome_do_inscrito ||
-                            attendee.attendeeData.nome ||
-                            `Inscrito ${index + 1}`}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Lote: {attendee.batch.name}
+                {registration.attendees.map((attendee, index) => {
+                  const attendeeNome =
+                    attendee.attendeeData.nome_completo ||
+                    attendee.attendeeData.nome_do_inscrito ||
+                    attendee.attendeeData.nome ||
+                    `Inscrito ${index + 1}`;
+                  return (
+                    <div key={attendee.id} className="bg-muted/50 p-3 rounded-lg">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium truncate">{attendeeNome}</p>
+                            <button
+                              type="button"
+                              onClick={() => { setEditAttendee({ id: attendee.id, name: attendeeNome }); setEditNome(attendeeNome); }}
+                              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-primary"
+                              aria-label={`Editar nome de ${attendeeNome}`}
+                              title="Editar nome"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Lote: {attendee.batch.name}
+                          </p>
+                        </div>
+                        <p className="font-semibold shrink-0">
+                          R$ {Number(attendee.batch.price).toFixed(2).replace('.', ',')}
                         </p>
                       </div>
-                      <p className="font-semibold">
-                        R$ {Number(attendee.batch.price).toFixed(2).replace('.', ',')}
-                      </p>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+              {registration.paymentStatus === 'confirmed'
+                && registration.event?.sectorUpgradeEnabled === true && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setUpgradeOpen(true)}
+                >
+                  <ArrowUpRight className="w-4 h-4 mr-1" />
+                  {registration.attendees.length > 1 ? 'Mudar de setor (upgrade)' : 'Mudar de setor'}
+                </Button>
+              )}
             </div>
 
             <TicketDivider />
@@ -773,6 +815,64 @@ export default function Ticket() {
         </Card>
 
       </div>
+
+      {registration?.event?.id && (
+        <UpgradeSectorDialog
+          open={upgradeOpen}
+          onOpenChange={setUpgradeOpen}
+          orderCode={registration.orderCode}
+          eventId={registration.event.id}
+          onUpgraded={() => loadRegistration(registration.orderCode)}
+        />
+      )}
+
+      {registration && (
+        <Dialog open={Boolean(editAttendee)} onOpenChange={(o) => { if (!o) setEditAttendee(null); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar nome do inscrito</DialogTitle>
+              <DialogDescription>
+                Corrija o nome caso tenha sido digitado errado. Ele aparece no crachá e no ingresso.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <label htmlFor="edit-nome" className="text-sm font-medium">Nome completo</label>
+              <Input
+                id="edit-nome"
+                value={editNome}
+                onChange={(e) => setEditNome(e.target.value)}
+                placeholder="Nome do inscrito"
+                autoFocus
+                className="h-11"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditAttendee(null)} disabled={savingEdit}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={savingEdit || editNome.trim().length < 2}
+                onClick={async () => {
+                  if (!editAttendee) return;
+                  setSavingEdit(true);
+                  try {
+                    await editarNomeInscrito(registration.orderCode, editAttendee.id, editNome.trim());
+                    toast.success('Nome atualizado!');
+                    setEditAttendee(null);
+                    await loadRegistration(registration.orderCode);
+                  } catch (err: any) {
+                    toast.error(err?.response?.data?.message || 'Não foi possível atualizar o nome');
+                  } finally {
+                    setSavingEdit(false);
+                  }
+                }}
+              >
+                {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -36,6 +36,7 @@ export interface CheckInSchedulePayload {
   startTime: string;
   endTime: string;
   isActive: boolean;
+  printLabelOnCheckIn?: boolean;
 }
 
 export interface UpdateCheckInSchedulePayload {
@@ -44,6 +45,7 @@ export interface UpdateCheckInSchedulePayload {
   startTime?: string;
   endTime?: string;
   isActive?: boolean;
+  printLabelOnCheckIn?: boolean;
 }
 
 export interface CheckInStationPayload {

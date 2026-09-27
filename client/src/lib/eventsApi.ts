@@ -546,6 +546,148 @@ export const criarPagamentoInscricao = async (
   return response.data;
 };
 
+// ============= UPGRADE DE SETOR/LOTE PELO INSCRITO =============
+export interface UpgradeAttendee {
+  id: string;
+  name: string;
+  sector: string | null;
+  batchId: string;
+  price: number;
+  rank: number;
+}
+
+export interface UpgradeTarget {
+  batchId: string;
+  name: string;
+  sector: string | null;
+  rank: number;
+  price: number;
+  vagas: number | null; // null = ilimitado
+}
+
+export interface UpgradeOptionsResponse {
+  elegivel: boolean;
+  motivo: string | null;
+  attendees: UpgradeAttendee[];
+  sectorOrder: string[];
+  targets: UpgradeTarget[];
+  upgradePendente:
+    | {
+        paymentId: string;
+        targetBatchId: string;
+        attendeeIds: string[];
+        amount: number;
+        method: string;
+        expiresAt: string | null;
+      }
+    | null;
+}
+
+export interface IniciarUpgradePayload {
+  targetBatchId: string;
+  attendeeIds: string[];
+  paymentOptionId: string;
+  paymentData?: RegistrationPaymentData & { brand?: string };
+}
+
+export interface UpgradeStatusResponse {
+  status: string | null;
+  applied: boolean;
+  targetBatchId: string | null;
+  attendeeIds: string[];
+  amount: number | null;
+}
+
+// Cotação: inscritos + setores de destino disponíveis (permite upgrade de vários de uma vez)
+export const listarOpcoesUpgrade = async (orderCode: string): Promise<UpgradeOptionsResponse> => {
+  const response = await api.get(`/api/public/events/registrations/${orderCode}/upgrade-options`);
+  return response.data;
+};
+
+// Inicia o upgrade: reserva as vagas e cobra a diferença total (PIX/cartão)
+export const iniciarUpgrade = async (orderCode: string, payload: IniciarUpgradePayload) => {
+  const response = await api.post(`/api/public/events/registrations/${orderCode}/upgrade`, payload);
+  return response.data as {
+    pagamento: {
+      sucesso: boolean;
+      status?: number;
+      qrCodeString?: string;
+      qrCodeBase64?: string;
+      erro?: string;
+    };
+    payment: RegistrationPayment;
+    pixPendente?: boolean;
+  };
+};
+
+// Polling do status do upgrade (efetiva quando o PIX confirma)
+export const verificarStatusUpgrade = async (orderCode: string): Promise<UpgradeStatusResponse> => {
+  const response = await api.get(`/api/public/events/registrations/${orderCode}/upgrade/status`);
+  return response.data;
+};
+
+// ============= ETIQUETAS / CRACHÁS =============
+export interface LookupAttendee {
+  id: string;
+  name: string;
+  batch: { name: string; sector: string | null; price: number } | null;
+}
+export interface LookupRegistration {
+  orderCode: string;
+  paymentStatus: string;
+  buyerName: string | null;
+  event: { id: string; title: string; startDate?: string; location?: string; imageUrl?: string } | null;
+  attendees: LookupAttendee[];
+}
+
+export interface LabelElement {
+  id: string;
+  type: 'field' | 'text' | 'qr' | 'logo';
+  x: number; y: number; width: number; height: number;
+  field: string | null;
+  text: string;
+  fontSize: number;
+  fontWeight: 'normal' | 'bold';
+  align: 'left' | 'center' | 'right';
+  uppercase?: boolean;
+  nameFormat?: 'full' | 'first_last';
+}
+export interface LabelTemplateResponse {
+  event: { id: string; title: string; imageUrl?: string | null };
+  template: {
+    id: string;
+    name: string;
+    widthMm: number | string;
+    heightMm: number | string;
+    elements: LabelElement[];
+  };
+}
+
+// Busca pública de ingressos por código do pedido OU e-mail do comprador
+export const buscarIngressosPublico = async (q: string): Promise<LookupRegistration[]> => {
+  const response = await api.get('/api/public/events/registrations/lookup', { params: { q } });
+  return (response.data && response.data.resultados) || [];
+};
+
+// Edição pública do nome de um inscrito (pelo próprio comprador, na tela do ingresso)
+export const editarNomeInscrito = async (
+  orderCode: string,
+  attendeeId: string,
+  name: string
+): Promise<{ id: string; name: string }> => {
+  const response = await api.put(
+    `/api/public/events/registrations/${orderCode}/attendees/${attendeeId}/name`,
+    { name }
+  );
+  return response.data;
+};
+
+// Modelo de etiqueta ativo de um evento (null se não configurado)
+export const buscarModeloEtiqueta = async (eventId: string): Promise<LabelTemplateResponse | null> => {
+  const response = await api.get(`/api/public/events/${eventId}/label-template`);
+  return response.data || null;
+};
+
 // Buscar formas de pagamento do evento
 export const buscarFormasPagamento = async (eventId: string): Promise<PaymentOption[]> => {
   const cacheKey = `payment-options-${eventId}`;
