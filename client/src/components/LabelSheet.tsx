@@ -1,6 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import type { LabelElement, LabelTemplateResponse } from '@/lib/eventsApi';
+
+// Compacta o texto horizontalmente (scaleX) para caber na largura do campo, sem cortar.
+function FitText({ text, align }: { text: string; align: 'left' | 'center' | 'right' }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [scaleX, setScaleX] = useState(1);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const parent = el?.parentElement;
+    if (!el || !parent) return;
+    const avail = parent.clientWidth;
+    const need = el.scrollWidth;
+    setScaleX(need > avail && need > 0 ? Math.max(0.2, avail / need) : 1);
+  }, [text]);
+  const origin = align === 'center' ? 'center' : align === 'right' ? 'right' : 'left';
+  return (
+    <span
+      ref={ref}
+      style={{ display: 'inline-block', whiteSpace: 'nowrap', transform: `scaleX(${scaleX})`, transformOrigin: origin }}
+    >
+      {text}
+    </span>
+  );
+}
 
 export interface LabelRenderItem {
   key: string;
@@ -137,13 +160,11 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
           ...style,
           fontSize: `${el.fontSize}pt`,
           fontWeight: el.fontWeight,
-          textAlign: el.align,
           lineHeight: 1.05,
-          whiteSpace: 'nowrap',
           color: '#000',
         }}
       >
-        {value}
+        <FitText text={value} align={el.align} />
       </div>
     );
   };
