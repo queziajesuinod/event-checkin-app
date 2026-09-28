@@ -77,7 +77,7 @@ function EventsHeroBanner({
     });
 
   return (
-    <section className="relative h-[58vh] min-h-[360px] max-h-[560px] w-full overflow-hidden">
+    <section className="portal-public-hero relative h-[58vh] min-h-[360px] max-h-[560px] w-full overflow-hidden">
       {/* Slides com parallax + crossfade */}
       {events.map((ev, i) => (
         <div
@@ -97,7 +97,7 @@ function EventsHeroBanner({
               />
             </div>
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-orange-400 to-amber-500" />
+            <div className="w-full h-full bg-[#172b46]" />
           )}
         </div>
       ))}
@@ -441,10 +441,10 @@ export default function EventList() {
       <div
         key={evento.id}
         style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}
-        className={`animate-fade-in-up group flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm transition-all duration-300 ${
+        className={`portal-public-event-card group flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm transition-all duration-300 ${
           encerrado
             ? 'opacity-75 hover:opacity-100 hover:shadow-md'
-            : 'hover:shadow-xl hover:-translate-y-1.5 hover:ring-1 hover:ring-primary/20'
+            : 'hover:shadow-md'
         }`}
       >
         <div className="aspect-[16/9] overflow-hidden bg-slate-100 relative">
@@ -456,7 +456,7 @@ export default function EventList() {
                 loading="lazy"
                 decoding="async"
                 className={`w-full h-full object-cover transition-transform duration-500 ease-out ${
-                  encerrado ? 'grayscale-[35%]' : 'group-hover:scale-110'
+                  encerrado ? 'grayscale-[35%]' : 'group-hover:scale-[1.03]'
                 }`}
               />
               {esgotado && (
@@ -468,8 +468,8 @@ export default function EventList() {
               )}
             </>
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-orange-100 to-amber-200 flex items-center justify-center">
-              <Calendar className="h-10 w-10 text-orange-400" />
+            <div className="w-full h-full bg-secondary flex items-center justify-center">
+              <Calendar className="h-10 w-10 text-primary" />
             </div>
           )}
 
@@ -524,7 +524,7 @@ export default function EventList() {
               {availability.activeBatchNames.map((name) => (
                 <span
                   key={name}
-                  className="text-xs bg-orange-50 text-orange-600 font-medium px-2.5 py-0.5 rounded-full border border-orange-100"
+                  className="text-xs bg-secondary text-primary font-medium px-2.5 py-0.5 rounded-full border border-border"
                 >
                   {name}
                 </span>
@@ -548,14 +548,7 @@ export default function EventList() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-orange-50/70 via-slate-50 to-slate-100">
-      {/* Blobs decorativos desfocados — dão profundidade ao fundo */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-28 -left-24 h-80 w-80 rounded-full bg-orange-300/30 blur-3xl" />
-        <div className="absolute top-24 -right-24 h-80 w-80 rounded-full bg-amber-300/25 blur-3xl" />
-        <div className="absolute bottom-10 left-1/3 h-72 w-72 rounded-full bg-blue-300/20 blur-3xl" />
-      </div>
-
+    <div className="portal-page min-h-screen relative overflow-hidden bg-background">
       {/* Banner parallax com os eventos ativos */}
       {!loading && !error && eventosAbertos.length > 0 && (
         <EventsHeroBanner
@@ -566,7 +559,7 @@ export default function EventList() {
       )}
 
       {/* Header + toolbar */}
-      <div className="relative bg-white/70 backdrop-blur-md border-b border-white/60 shadow-sm">
+      <div className="portal-public-toolbar relative">
         <div className="container max-w-6xl mx-auto px-4 py-6 space-y-5">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
@@ -585,7 +578,7 @@ export default function EventList() {
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar por nome, local ou cidade..."
-                  className="w-full h-11 pl-10 pr-10 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors"
+                  className="w-full h-11 pl-10 pr-10 rounded-xl border border-slate-200 bg-background text-sm text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors"
                 />
                 {busca && (
                   <button
@@ -608,7 +601,7 @@ export default function EventList() {
                     className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors cursor-pointer ${
                       tipoSelecionado === 'todos'
                         ? 'bg-primary text-white border-primary'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-background'
                     }`}
                   >
                     Todos
@@ -621,7 +614,7 @@ export default function EventList() {
                       className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors cursor-pointer ${
                         tipoSelecionado === tipo
                           ? 'bg-primary text-white border-primary'
-                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-background'
                       }`}
                     >
                       {tipo}

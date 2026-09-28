@@ -42,10 +42,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const C = {
-  navy: "#0A1F3F",
-  blue: "#1B4D8E",
-  sky: "#4A90D9",
-  surface: "#F0F2F5",
+  navy: "#172b46",
+  blue: "#244ac0",
+  sky: "#55739a",
+  surface: "#f1f4f7",
   white: "#FFFFFF",
   gold: "#C9A84C",
   green: "#16A34A",
@@ -62,7 +62,7 @@ const PAPEL_LABELS: Record<string, string> = {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   aberta: { label: "Aberta", color: "#16A34A" },
-  agendada: { label: "Agendada", color: "#1B4D8E" },
+  agendada: { label: "Agendada", color: "#244ac0" },
   encerrada: { label: "Encerrada", color: "#64748B" },
   cancelada: { label: "Cancelada", color: "#DC2626" },
 };
@@ -425,8 +425,8 @@ export default function CelulaLider() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-5" style={{ backgroundColor: C.surface }}>
-        <Skeleton className="h-36 rounded-3xl mb-5" />
+      <div className="portal-page min-h-screen p-5" style={{ backgroundColor: C.surface }}>
+        <Skeleton className="h-36 rounded-2xl mb-5" />
         <Skeleton className="h-10 rounded-2xl mb-4" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -440,7 +440,7 @@ export default function CelulaLider() {
   if (error || !celula) {
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center p-5"
+        className="portal-page portal-workspace min-h-screen flex flex-col items-center justify-center p-5"
         style={{ backgroundColor: C.surface }}
       >
         <AlertCircle className="w-14 h-14 mb-3" style={{ color: C.red }} />
@@ -460,14 +460,14 @@ export default function CelulaLider() {
   const reunioesAbertas = reunioes.filter((r) => r.status === "aberta");
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
+    <div className="portal-page portal-workspace min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
       {/* Card da célula */}
-      <div className="px-5 pt-6 pb-4">
+      <div className="portal-workspace-section px-5 pt-8 pb-6">
         <div
-          className="rounded-3xl p-5"
+          className="portal-summary"
           style={{
-            background: `linear-gradient(135deg, ${C.blue}, ${C.sky})`,
-            boxShadow: `0 8px 24px ${C.blue}44`,
+            background: C.navy,
+            boxShadow: 'none',
           }}
         >
           <div className="flex items-start justify-between">
@@ -511,7 +511,7 @@ export default function CelulaLider() {
       </div>
 
       {/* Tabs */}
-      <div className="flex-1 px-5 pb-10">
+      <div className="portal-workspace-section flex-1 px-5 pb-10">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full mb-4 rounded-2xl" style={{ backgroundColor: C.white }}>
             <TabsTrigger value="membros" className="flex-1 rounded-xl gap-1.5">
@@ -699,7 +699,7 @@ export default function CelulaLider() {
           if (!o) resetAddDialog();
         }}
       >
-        <DialogContent className="rounded-3xl max-w-md mx-4">
+        <DialogContent className="rounded-2xl max-w-md mx-4">
           <DialogHeader>
             <DialogTitle style={{ color: C.navy }}>
               {showNewForm ? "Cadastrar novo membro" : "Adicionar membro"}
@@ -835,7 +835,7 @@ export default function CelulaLider() {
 
       {/* ── Dialog: Editar membro ── */}
       <Dialog open={!!editMembro} onOpenChange={(o) => { if (!o) setEditMembro(null); }}>
-        <DialogContent className="rounded-3xl max-w-sm mx-4">
+        <DialogContent className="rounded-2xl max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle style={{ color: C.navy }}>Editar membro</DialogTitle>
           </DialogHeader>
@@ -908,7 +908,7 @@ export default function CelulaLider() {
 
       {/* ── Dialog: Editar reunião ── */}
       <Dialog open={!!editReuniao} onOpenChange={(o) => { if (!o) setEditReuniao(null); }}>
-        <DialogContent className="rounded-3xl max-w-sm mx-4">
+        <DialogContent className="rounded-2xl max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle style={{ color: C.navy }}>Editar reunião</DialogTitle>
           </DialogHeader>
@@ -965,7 +965,7 @@ export default function CelulaLider() {
 
       {/* ── Dialog: Nova reunião ── */}
       <Dialog open={newReuniaoOpen} onOpenChange={setNewReuniaoOpen}>
-        <DialogContent className="rounded-3xl max-w-sm mx-4">
+        <DialogContent className="rounded-2xl max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle style={{ color: C.navy }}>Nova reunião</DialogTitle>
           </DialogHeader>
@@ -1001,7 +1001,7 @@ export default function CelulaLider() {
 
       {/* ── Dialog: Sugestões automáticas ── */}
       <Dialog open={suggestOpen} onOpenChange={setSuggestOpen}>
-        <DialogContent className="rounded-3xl max-w-md mx-4">
+        <DialogContent className="rounded-2xl max-w-md mx-4">
           <DialogHeader>
             <DialogTitle style={{ color: C.navy }}>Sugestões de reuniões</DialogTitle>
           </DialogHeader>
@@ -1020,7 +1020,7 @@ export default function CelulaLider() {
                 {suggestions.map((s) => (
                   <label
                     key={s.data}
-                    className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer hover:bg-background transition-colors"
                     style={{ borderColor: "#E2E8F0", opacity: s.jaExiste ? 0.6 : 1 }}
                   >
                     <Checkbox

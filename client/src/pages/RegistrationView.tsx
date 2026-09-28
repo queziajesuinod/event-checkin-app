@@ -576,7 +576,7 @@ export default function RegistrationView() {
 
   if (!orderCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="portal-page min-h-screen flex items-center justify-center px-4">
         <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle>Inscrição não encontrada</CardTitle>
@@ -594,7 +594,7 @@ export default function RegistrationView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="portal-page min-h-screen flex items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
@@ -602,7 +602,7 @@ export default function RegistrationView() {
 
   if (!registration) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="portal-page min-h-screen flex items-center justify-center px-4">
         <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle>Erro ao carregar inscrição</CardTitle>
@@ -622,7 +622,7 @@ export default function RegistrationView() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div className="portal-page min-h-screen bg-background py-10 px-4">
       <div className="container max-w-4xl mx-auto space-y-5">
         <button
           type="button"
@@ -634,10 +634,10 @@ export default function RegistrationView() {
         </button>
 
         {/* Header da inscrição */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="portal-document-card bg-white rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Minha Inscrição</h1>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Minha inscrição</h1>
               <p className="text-sm text-slate-500 mt-1">{eventTitle}</p>
               {nomeInscrito && (
                 <p className="text-sm font-medium text-slate-700 mt-1">{nomeInscrito}</p>
@@ -666,7 +666,7 @@ export default function RegistrationView() {
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h2 className="text-sm font-semibold text-slate-700 mb-4">Status financeiro</h2>
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <div className="rounded-xl border border-slate-100 bg-background p-4">
               <p className="text-xs text-slate-400 uppercase tracking-wide">Total</p>
               <p className="text-xl font-bold text-slate-900 mt-1">
                 {formatCurrency(registration.finalPrice)}
@@ -824,7 +824,7 @@ export default function RegistrationView() {
                             className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3.5 text-sm font-medium transition-all ${
                               isSelected
                                 ? 'border-primary bg-primary/5 text-primary'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-background'
                             }`}
                           >
                             <Icon className="h-4 w-4" />
@@ -897,7 +897,7 @@ export default function RegistrationView() {
                         type="button"
                         onClick={() => setAmountMode('integral')}
                         className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
-                          amountMode === 'integral' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-white'
+                          amountMode === 'integral' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-background hover:bg-white'
                         }`}
                       >
                         <div>
@@ -913,7 +913,7 @@ export default function RegistrationView() {
                           setAmount('');
                         }}
                         className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
-                          amountMode === 'outro' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-white'
+                          amountMode === 'outro' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-background hover:bg-white'
                         }`}
                       >
                         <p className="font-medium text-slate-800">Outro valor</p>

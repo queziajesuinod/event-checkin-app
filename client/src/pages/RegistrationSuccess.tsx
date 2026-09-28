@@ -63,7 +63,7 @@ export default function RegistrationSuccess() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="portal-page min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
@@ -71,7 +71,7 @@ export default function RegistrationSuccess() {
 
   if (!inscricao) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="portal-page min-h-screen flex items-center justify-center bg-background px-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-sm w-full space-y-4">
           <p className="font-medium text-slate-700">Inscrição não encontrada</p>
           <p className="text-sm text-slate-400">
@@ -89,28 +89,28 @@ export default function RegistrationSuccess() {
   const isConfirmed = inscricao.paymentStatus === 'confirmed';
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div className="portal-page min-h-screen bg-background py-10 px-4">
       <div className="container max-w-lg mx-auto space-y-5">
 
         {/* Status header */}
         <div
           className={`rounded-2xl p-8 text-center ${
             isConfirmed
-              ? 'bg-gradient-to-b from-green-500 to-green-600 text-white'
-              : 'bg-gradient-to-b from-amber-400 to-amber-500 text-white'
+              ? 'bg-emerald-700 text-white'
+              : 'bg-amber-100 text-amber-950'
           }`}
         >
           <div className="flex justify-center mb-4">
             {isConfirmed ? (
               <CheckCircle2 className="h-16 w-16 text-white drop-shadow" />
             ) : (
-              <Loader2 className="h-16 w-16 text-white animate-spin drop-shadow" />
+              <Loader2 className="h-12 w-12 text-amber-800 animate-spin" />
             )}
           </div>
           <h1 className="text-2xl font-bold">
             {isConfirmed ? 'Inscrição Confirmada!' : 'Inscrição Registrada'}
           </h1>
-          <p className="text-sm mt-2 text-white/80">
+          <p className="text-sm mt-2 opacity-90">
             {isConfirmed
               ? 'Seu pagamento foi processado com sucesso'
               : 'Aguardando confirmação do pagamento'}
@@ -125,7 +125,7 @@ export default function RegistrationSuccess() {
             <button
               type="button"
               onClick={copiarCodigo}
-              className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+              className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-background transition-colors"
             >
               {copiado ? (
                 <Check className="h-4 w-4 text-green-600" />

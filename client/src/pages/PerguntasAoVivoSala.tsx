@@ -193,8 +193,13 @@ export default function PerguntasAoVivoSala() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-10">
-      <div className="px-4 pt-4 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto">
+    <div className="portal-page min-h-screen bg-background pb-10">
+      <div className="portal-content">
+        <header className="portal-heading">
+          <span className="portal-eyebrow">Moderação</span>
+          <h1>{sala?.title || 'Sala de perguntas'}</h1>
+          <p>Selecione as perguntas e acompanhe a conversa em tempo real.</p>
+        </header>
         {/* Barra de ações */}
         {sala && (
           <div className="flex flex-wrap items-center gap-2 mb-4">

@@ -114,11 +114,11 @@ export default function PixConfirmation() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div className="portal-page min-h-screen bg-background py-10 px-4">
       <div className="container max-w-lg mx-auto space-y-5">
 
         {/* Header */}
-        <div className="bg-gradient-to-b from-blue-500 to-blue-600 rounded-2xl p-8 text-center text-white">
+        <div className="bg-[#244ac0] rounded-xl p-8 text-center text-white">
           <QrCode className="h-12 w-12 mx-auto mb-3 drop-shadow" />
           <h1 className="text-2xl font-bold">Pagamento PIX</h1>
           <p className="text-sm mt-1 text-white/80">
@@ -129,7 +129,7 @@ export default function PixConfirmation() {
         {/* Tabs PIX */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <Tabs defaultValue="qrcode" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 rounded-none border-b border-slate-100 h-12 bg-slate-50 p-0">
+            <TabsList className="grid w-full grid-cols-2 rounded-none border-b border-slate-100 h-12 bg-background p-0">
               <TabsTrigger
                 value="qrcode"
                 className="rounded-none h-full data-[state=active]:bg-white data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
@@ -171,7 +171,7 @@ export default function PixConfirmation() {
                 <textarea
                   readOnly
                   value={pixCode}
-                  className="w-full h-28 px-3 py-2.5 border border-slate-200 rounded-xl font-mono text-xs resize-none bg-slate-50 text-slate-700"
+                  className="w-full h-28 px-3 py-2.5 border border-slate-200 rounded-xl font-mono text-xs resize-none bg-background text-slate-700"
                 />
                 <Button
                   onClick={copyToClipboard}

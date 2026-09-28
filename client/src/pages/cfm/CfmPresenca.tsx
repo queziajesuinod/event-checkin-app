@@ -7,7 +7,7 @@ import { useLocation } from 'wouter';
 const JSQR_SCAN_INTERVAL_MS = 140;
 
 const AMBER = '#D97706';
-const NAVY  = '#0A1F3F';
+const NAVY  = '#172b46';
 
 const CORNER_CLASSES = [
   { pos: 'top-0 left-0',     borders: 'border-t-[3px] border-l-[3px] rounded-tl-xl' },
@@ -193,15 +193,15 @@ export default function CfmPresenca() {
   const cancelar = () => setState({ kind: 'idle' });
 
   return (
-    <div className="flex flex-col" style={{ minHeight: '100dvh', backgroundColor: '#F0F2F5' }}>
+    <div className="portal-page flex flex-col" style={{ minHeight: '100dvh', backgroundColor: '#f1f4f7' }}>
 
       {/* ── Header ── */}
       <div
         className="flex items-center gap-3 px-4 flex-shrink-0"
         style={{
           backgroundColor: NAVY,
-          borderBottomLeftRadius: 20,
-          borderBottomRightRadius: 20,
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
           paddingTop: 'max(14px, env(safe-area-inset-top))',
           paddingBottom: 14,
         }}
@@ -231,11 +231,11 @@ export default function CfmPresenca() {
       </div>
 
       {/* ── Body ── */}
-      <div className="flex-1 flex flex-col px-4 pt-5 pb-6 gap-4">
+      <div className="portal-content portal-content-narrow flex-1 flex flex-col gap-5">
 
         {/* Camera card */}
         <div
-          className="w-full rounded-3xl overflow-hidden"
+          className="w-full rounded-2xl overflow-hidden"
           style={{ boxShadow: '0 4px 20px rgba(10,31,63,0.10)', backgroundColor: '#000' }}
         >
           <div className="relative">
@@ -320,7 +320,7 @@ export default function CfmPresenca() {
         {/* ── SCANNED: matéria selection ── */}
         {state.kind === 'scanned' && (
           <div
-            className="rounded-3xl p-5"
+            className="rounded-2xl p-5"
             style={{ backgroundColor: '#fff', boxShadow: '0 4px 20px rgba(10,31,63,0.08)' }}
           >
             {/* Student */}
@@ -374,7 +374,7 @@ export default function CfmPresenca() {
         {/* ── MARKING: loading ── */}
         {state.kind === 'marking' && (
           <div
-            className="rounded-3xl p-6 flex flex-col items-center gap-4"
+            className="rounded-2xl p-6 flex flex-col items-center gap-4"
             style={{ backgroundColor: '#fff', boxShadow: '0 4px 20px rgba(10,31,63,0.08)' }}
           >
             <div
@@ -393,7 +393,7 @@ export default function CfmPresenca() {
         {/* ── SUCCESS ── */}
         {state.kind === 'success' && (
           <div
-            className="rounded-3xl p-5"
+            className="rounded-2xl p-5"
             style={{
               backgroundColor: '#fff',
               boxShadow: '0 4px 20px rgba(10,31,63,0.08)',
@@ -425,7 +425,7 @@ export default function CfmPresenca() {
         {/* ── ERROR ── */}
         {state.kind === 'error' && (
           <div
-            className="rounded-3xl p-5"
+            className="rounded-2xl p-5"
             style={{
               backgroundColor: '#fff',
               boxShadow: '0 4px 20px rgba(10,31,63,0.08)',

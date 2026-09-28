@@ -688,6 +688,43 @@ export const buscarModeloEtiqueta = async (eventId: string): Promise<LabelTempla
   return response.data || null;
 };
 
+// ============= RETIRADA DE KIT =============
+export interface KitInfo {
+  sector: string;
+  color: string;
+  label: string;
+}
+export interface KitConfigResponse {
+  event: { id: string; title: string; imageUrl?: string | null };
+  kits: KitInfo[];
+  imprimeEtiqueta: boolean;
+}
+export interface KitDeliveryResponse {
+  delivered?: boolean;
+  alreadyDelivered?: boolean;
+  attendeeName: string;
+  sector: string | null;
+  kit: KitInfo | null;
+  orderCode: string;
+  attendeeId: string;
+  eventId: string;
+  imprimeEtiqueta: boolean;
+  deliveredAt?: string;
+}
+
+export const buscarConfigKit = async (eventId: string): Promise<KitConfigResponse> => {
+  const response = await api.get(`/api/public/events/${eventId}/kit-config`);
+  return response.data;
+};
+
+export const registrarRetiradaKit = async (
+  eventId: string,
+  payload: { orderCode: string; attendeeId?: string }
+): Promise<KitDeliveryResponse> => {
+  const response = await api.post(`/api/public/events/${eventId}/kit-delivery`, payload);
+  return response.data;
+};
+
 // Buscar formas de pagamento do evento
 export const buscarFormasPagamento = async (eventId: string): Promise<PaymentOption[]> => {
   const cacheKey = `payment-options-${eventId}`;

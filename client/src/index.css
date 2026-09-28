@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./styles/portal.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -43,8 +44,8 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
+  --primary: #244ac0;
+  --primary-foreground: #ffffff;
   --sidebar-primary: var(--color-blue-600);
   --sidebar-primary-foreground: var(--color-blue-50);
   --chart-1: var(--color-blue-300);
@@ -52,26 +53,26 @@
   --chart-3: var(--color-blue-600);
   --chart-4: var(--color-blue-700);
   --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
+  --radius: 0.7rem;
+  --background: #f1f4f7;
+  --foreground: #172b46;
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
+  --card-foreground: #172b46;
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
+  --popover-foreground: #172b46;
+  --secondary: #e8eef6;
+  --secondary-foreground: #294263;
   --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
+  --muted-foreground: #58697d;
   --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
+  --accent-foreground: #172b46;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
+  --border: #d6dfe8;
+  --input: #c5d0dd;
+  --ring: #557bd6;
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
+  --sidebar-foreground: #172b46;
   --sidebar-accent: oklch(0.967 0.001 286.375);
   --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
   --sidebar-border: oklch(0.92 0.004 286.32);
@@ -225,4 +226,32 @@
     animation: none;
     opacity: 1;
   }
+}
+
+/* Notificações (sonner) — mobile-first e responsivas em tablet/desktop */
+[data-sonner-toaster] {
+  --width: 380px;
+  --front-toast-height: auto;
+}
+/* Celular: ocupa a largura com respiro nas bordas e respeita o notch */
+@media (max-width: 600px) {
+  [data-sonner-toaster] {
+    --width: 100%;
+    left: 0 !important;
+    right: 0 !important;
+    padding-inline: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+  [data-sonner-toaster] [data-sonner-toast] {
+    width: 100%;
+  }
+}
+/* Tablet: largura intermediária mais confortável */
+@media (min-width: 601px) and (max-width: 1024px) {
+  [data-sonner-toaster] {
+    --width: 440px;
+  }
+}
+[data-sonner-toast] [data-title] {
+  overflow-wrap: anywhere;
 }

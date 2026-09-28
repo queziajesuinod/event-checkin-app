@@ -93,7 +93,7 @@ export default function RegistrationConfirmation() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="portal-page min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
@@ -101,7 +101,7 @@ export default function RegistrationConfirmation() {
 
   if (!registration) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="portal-page min-h-screen flex items-center justify-center bg-background px-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-sm w-full space-y-4">
           <p className="font-medium text-slate-700">Inscrição não encontrada</p>
           <Button onClick={() => setLocation('/eventos')} className="w-full">
@@ -120,10 +120,10 @@ export default function RegistrationConfirmation() {
   const deniedReasonMessage = getCieloDeniedMessage(registration);
 
   const statusBg = isConfirmed
-    ? 'from-green-500 to-green-600'
+    ? 'bg-emerald-700'
     : isDenied
-    ? 'from-red-500 to-red-600'
-    : 'from-amber-400 to-amber-500';
+    ? 'bg-rose-700'
+    : 'bg-amber-700';
 
   const statusIcon = isConfirmed ? (
     <CheckCircle className="h-14 w-14 text-white drop-shadow" />
@@ -140,7 +140,7 @@ export default function RegistrationConfirmation() {
     : 'Aguardando Pagamento';
 
   return (
-    <div className="min-h-screen relative py-10 px-4">
+    <div className="portal-page min-h-screen relative py-10 px-4">
       {/* Background fixo — imagem do evento com blur + overlay */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         {registration.event?.imageUrl ? (
@@ -168,14 +168,14 @@ export default function RegistrationConfirmation() {
       <div className="container max-w-lg mx-auto space-y-5">
 
         {/* Status header */}
-        <div className={`rounded-2xl bg-gradient-to-b ${statusBg} p-8 text-center text-white`}>
+        <div className={`rounded-2xl ${statusBg} p-8 text-center text-white`}>
           <div className="flex justify-center mb-4">{statusIcon}</div>
           <h1 className="text-2xl font-bold">{statusTitle}</h1>
           <p className="text-sm mt-1 text-white/80">Código: {registration.orderCode}</p>
         </div>
 
         {/* Resumo */}
-        <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl divide-y divide-slate-100">
+        <div className="portal-document-card bg-white rounded-2xl divide-y divide-slate-100">
           <div className="flex justify-between items-center px-5 py-3.5 text-sm">
             <span className="text-slate-500">Quantidade</span>
             <span className="font-medium text-slate-900">{registration.quantity} inscrito(s)</span>
@@ -200,7 +200,7 @@ export default function RegistrationConfirmation() {
 
         {/* PIX pendente */}
         {isPix && isPending && (
-          <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6 space-y-5">
+          <div className="portal-document-card bg-white rounded-2xl p-6 space-y-5">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <QrCode
                 className="h-5 w-5 text-slate-400"
@@ -231,7 +231,7 @@ export default function RegistrationConfirmation() {
                     type="text"
                     value={registration.pixQrCode}
                     readOnly
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono bg-slate-50 text-slate-700"
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono bg-background text-slate-700"
                   />
                   <Button onClick={copiarPixCode} variant="outline" size="sm">
                     <Copy className="h-4 w-4" />

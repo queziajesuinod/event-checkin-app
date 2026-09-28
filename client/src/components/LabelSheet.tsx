@@ -173,7 +173,7 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
     <>
       <style>{`
         @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
-        ${screenHidden ? '@media screen { #etiquetas-print { display: none !important; } }' : ''}
+        ${screenHidden ? '@media screen { #etiquetas-print { position: fixed !important; left: -10000px !important; top: 0 !important; opacity: 0 !important; pointer-events: none !important; z-index: -1 !important; } }' : ''}
         @media print {
           body * { visibility: hidden !important; }
           #etiquetas-print, #etiquetas-print * { visibility: visible !important; }

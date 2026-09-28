@@ -211,10 +211,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Endpoints de autenticação: um 401 aqui significa "credenciais inválidas",
+// não "sessão expirada". Não devemos redirecionar/recarregar — a página de
+// login precisa capturar o erro e exibir a notificação ao usuário.
+const AUTH_ENDPOINTS = ["/auth/login", "/auth/forgot-password"];
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl: string = error.config?.url ?? "";
+    const isAuthRequest = AUTH_ENDPOINTS.some((path) => requestUrl.includes(path));
+
+    if (error.response?.status === 401 && !isAuthRequest) {
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
       window.location.href = "/login";

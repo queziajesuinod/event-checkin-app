@@ -11,10 +11,10 @@ import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const C = {
-  navy: '#0A1F3F',
-  blue: '#1B4D8E',
-  sky: '#4A90D9',
-  surface: '#F0F2F5',
+  navy: '#172b46',
+  blue: '#244ac0',
+  sky: '#55739a',
+  surface: '#f1f4f7',
   gold: '#C9A84C',
   white: '#FFFFFF',
 };
@@ -33,13 +33,13 @@ function Section({
 }) {
   return (
     <div
-      className="rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
-      style={{ backgroundColor: C.white, boxShadow: '0 4px 20px rgba(10,31,63,0.08)' }}
+      className="portal-panel overflow-hidden"
+      style={{ backgroundColor: C.white, boxShadow: 'none' }}
     >
       {/* Cabeçalho da seção */}
       <div
         className="px-5 py-4 flex items-center gap-3"
-        style={{ borderBottom: '1px solid #F0F2F5' }}
+        style={{ borderBottom: '1px solid #f1f4f7' }}
       >
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
@@ -585,7 +585,7 @@ const RegistroCulto = () => {
     };
 
     return (
-      <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
+      <div className="portal-page min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
         <div className="flex-1 w-full max-w-2xl mx-auto px-4 pt-8 pb-10">
           {/* Ícone de sucesso */}
           <div className="flex flex-col items-center mb-8 animate-in fade-in zoom-in-50 duration-500">
@@ -615,7 +615,7 @@ const RegistroCulto = () => {
           {/* Resumo dos dados */}
           <div
             className="rounded-2xl overflow-hidden mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
-            style={{ backgroundColor: C.white, boxShadow: '0 4px 20px rgba(10,31,63,0.08)' }}
+            style={{ backgroundColor: C.white, boxShadow: 'none' }}
           >
             <div className="px-5 py-3" style={{ backgroundColor: C.navy }}>
               <span className="text-sm font-semibold text-white">Resumo do Registro</span>
@@ -688,7 +688,7 @@ const RegistroCulto = () => {
   const exibeOnline = campus?.transmiteOnline && min?.exibeOnline !== false;
 
   return (
-    <div className="min-h-screen pb-28" style={{ backgroundColor: C.surface }}>
+    <div className="portal-page min-h-screen pb-28" style={{ backgroundColor: C.surface }}>
       {/* ── Barra offline colapsável ── */}
       <div style={{
         backgroundColor: isOnline ? '#EBF2FB' : '#FEF3C7',
@@ -699,7 +699,7 @@ const RegistroCulto = () => {
             type="button"
             onClick={() => setOfflineExpanded((v) => !v)}
             className="w-full flex items-center justify-between py-2 text-xs font-medium"
-            style={{ color: isOnline ? '#1B4D8E' : '#92400E' }}
+            style={{ color: isOnline ? '#244ac0' : '#92400E' }}
           >
             <span className="flex items-center gap-1.5">
               {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
@@ -742,7 +742,7 @@ const RegistroCulto = () => {
                 onClick={syncOfflineQueue}
                 disabled={!isOnline || isSyncing || offlineQueue.length === 0}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 disabled:opacity-50"
-                style={{ backgroundColor: '#fff', border: '1px solid #BFDBFE', color: '#1B4D8E' }}
+                style={{ backgroundColor: '#fff', border: '1px solid #BFDBFE', color: '#244ac0' }}
               >
                 {isSyncing
                   ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Sincronizando...</>
@@ -755,7 +755,7 @@ const RegistroCulto = () => {
 
       <div className="w-full max-w-2xl mx-auto px-4 pt-6">
         {/* Título da página */}
-        <div className="mb-6">
+        <div className="portal-heading">
           <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: C.gold }}>
             {isEditing ? 'Editando registro' : 'Novo registro'}
           </p>

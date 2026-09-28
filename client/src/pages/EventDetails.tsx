@@ -1400,7 +1400,7 @@ export default function EventDetails() {
 
   if (loadingEvent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="portal-page min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-3">
           <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
           <p className="text-sm text-slate-500">Carregando evento...</p>
@@ -1411,7 +1411,7 @@ export default function EventDetails() {
 
   if (!evento) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="portal-page min-h-screen flex items-center justify-center bg-background px-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-sm w-full space-y-4">
           <p className="font-medium text-slate-700">Evento não encontrado</p>
           <Button variant="outline" onClick={() => setLocation('/eventos')} className="w-full">
@@ -1426,8 +1426,8 @@ export default function EventDetails() {
   // ──── VIEW: SUCESSO NA SOLICITAÇÃO DE ENTRADA ────
   if (depositRequestSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+      <div className="portal-page min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full portal-document-card bg-white rounded-2xl p-8 text-center">
           <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
             <Clock className="h-8 w-8 text-blue-600" />
           </div>
@@ -1457,8 +1457,8 @@ export default function EventDetails() {
   // ──── VIEW: SUCESSO NA LISTA DE ESPERA ────
   if (waitlistSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+      <div className="portal-page min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full portal-document-card bg-white rounded-2xl p-8 text-center">
           <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
             <Clock className="h-8 w-8 text-amber-600" />
           </div>
@@ -1544,7 +1544,7 @@ export default function EventDetails() {
     };
 
     return (
-      <div className="min-h-screen relative">
+      <div className="portal-page min-h-screen relative">
         {/* Background fixo — imagem com blur + overlay */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
           {evento.imageUrl ? (
@@ -1686,7 +1686,7 @@ export default function EventDetails() {
 
               {/* Card Ingressos */}
               <div
-                className="bg-white rounded-2xl shadow-xl p-5"
+                className="portal-document-card bg-white rounded-2xl p-5"
                 style={palette ? { boxShadow: palette.shadow } : undefined}
               >
                 <h3 className="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
@@ -1832,7 +1832,7 @@ export default function EventDetails() {
   })();
 
   return (
-    <div className="min-h-screen relative">
+    <div className="portal-page min-h-screen relative">
       {/* Background — imagem estendida com blur + overlay (mesmo modelo da etapa de ingressos) */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         {evento.imageUrl ? (
@@ -1952,7 +1952,7 @@ export default function EventDetails() {
 
               {/* Inscritos */}
               {camposInscrito.length > 0 && (
-                <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-4 sm:p-6">
+                <div className="portal-document-card bg-white rounded-2xl p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h2 className="text-base font-semibold text-slate-900">Inscritos</h2>
@@ -2082,7 +2082,7 @@ export default function EventDetails() {
               )}
 
               {/* Card Ingressos — resumo dos selecionados */}
-              <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-5">
+              <div className="portal-document-card bg-white rounded-2xl p-5">
                 <h3 className="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
                   <span
                     className="h-4 w-1 rounded-full bg-primary"
@@ -2159,7 +2159,7 @@ export default function EventDetails() {
               <div className="space-y-5">
                 {/* Dados do comprador (pago) / responsável pelo ingresso (gratuito) */}
                 {camposComprador.length > 0 && (
-                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-4 sm:p-6">
+                  <div className="portal-document-card bg-white rounded-2xl p-4 sm:p-6">
                     <h2 className="text-base font-semibold text-slate-900 mb-5">
                       {requiresPayment ? 'Seus dados' : 'Responsável pelo ingresso'}
                     </h2>
@@ -2185,7 +2185,7 @@ export default function EventDetails() {
                 )}
 
                 {requiresPayment && !modoListaEspera ? (
-                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-4 sm:p-6 space-y-5">
+                  <div className="portal-document-card bg-white rounded-2xl p-4 sm:p-6 space-y-5">
                     <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
                       <CreditCard className="h-5 w-5 text-slate-400" />
                       Forma de pagamento
@@ -2229,7 +2229,7 @@ export default function EventDetails() {
                                       className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3.5 text-sm font-medium transition-all ${
                                         isSelected
                                           ? 'border-primary bg-primary/5 text-primary'
-                                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-background'
                                       }`}
                                     >
                                       <Icon className="h-4 w-4" />
@@ -2250,7 +2250,7 @@ export default function EventDetails() {
                             <div className="flex flex-col gap-2">
                               {evento?.depositAmount && evento.depositAmount < totalSemJuros && (
                                 <button type="button" onClick={() => setModoSinal('sinal')}
-                                  className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${modoSinal === 'sinal' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
+                                  className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${modoSinal === 'sinal' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-background hover:bg-white'}`}>
                                   <div>
                                     <p className="font-medium text-slate-800">Pagar sinal</p>
                                     <p className="text-xs text-slate-500 mt-0.5">Quite o restante depois</p>
@@ -2259,7 +2259,7 @@ export default function EventDetails() {
                                 </button>
                               )}
                               <button type="button" onClick={() => setModoSinal('total')}
-                                className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${modoSinal === 'total' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
+                                className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${modoSinal === 'total' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-background hover:bg-white'}`}>
                                 <div>
                                   <p className="font-medium text-slate-800">Valor total</p>
                                   <p className="text-xs text-slate-500 mt-0.5">Quitar tudo de uma vez</p>
@@ -2267,7 +2267,7 @@ export default function EventDetails() {
                                 <span className="ml-4 shrink-0 font-bold text-primary">R$ {totalSemJuros.toFixed(2)}</span>
                               </button>
                               <button type="button" onClick={() => setModoSinal('outro')}
-                                className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${modoSinal === 'outro' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
+                                className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-colors ${modoSinal === 'outro' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-background hover:bg-white'}`}>
                                 <p className="font-medium text-slate-800">Outro valor</p>
                               </button>
                               {modoSinal === 'outro' && (
@@ -2457,7 +2457,7 @@ export default function EventDetails() {
                     )}
                   </div>
                 ) : modoListaEspera ? (
-                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-amber-200 shadow-xl p-6">
+                  <div className="bg-white rounded-2xl border border-amber-200 p-6">
                     <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
                       <Clock className="h-6 w-6 text-amber-600" />
                     </div>
@@ -2469,7 +2469,7 @@ export default function EventDetails() {
                     </p>
                   </div>
                 ) : (
-                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-6 text-center">
+                  <div className="portal-document-card bg-white rounded-2xl p-6 text-center">
                     <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
                       <Check className="h-6 w-6 text-green-600" />
                     </div>
@@ -2490,7 +2490,7 @@ export default function EventDetails() {
 
                 {/* Resumo do pedido — atualiza conforme forma de pagamento, taxas e cupom */}
                 {inscritos.some((i) => i.batchId) && (
-                  <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl p-5">
+                  <div className="portal-document-card bg-white rounded-2xl p-5">
                     <h3 className="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
                       <span
                         className="h-4 w-1 rounded-full bg-primary"

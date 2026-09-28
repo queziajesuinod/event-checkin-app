@@ -187,7 +187,7 @@ export default function ImprimirEtiquetas() {
   const imprimir = () => window.print();
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-muted/40 to-background">
+    <div className="portal-page min-h-dvh bg-background">
       {/* Animação do scanner (o CSS de impressão vem do LabelSheet) */}
       <style>{`
         @media print { .no-print { display: none !important; } }

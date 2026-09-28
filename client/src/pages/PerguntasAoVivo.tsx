@@ -80,8 +80,13 @@ export default function PerguntasAoVivo() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-10">
-      <div className="px-4 pt-4 max-w-xl mx-auto">
+    <div className="portal-page min-h-screen bg-background pb-10">
+      <div className="portal-content">
+        <header className="portal-heading">
+          <span className="portal-eyebrow">Conversa com o público</span>
+          <h1>Perguntas ao vivo</h1>
+          <p>Organize suas salas e acompanhe as perguntas de cada encontro.</p>
+        </header>
         {canManage && (
           <Button onClick={() => setOpen(true)} className="w-full mb-4 gap-2">
             <Plus className="w-4 h-4" /> Nova sala
@@ -99,7 +104,7 @@ export default function PerguntasAoVivo() {
             {canManage && <p className="text-sm text-slate-400">Clique em “Nova sala” para começar.</p>}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3">
             {salas.map((sala) => (
               <div
                 key={sala.id}

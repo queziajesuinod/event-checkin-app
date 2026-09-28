@@ -1564,7 +1564,7 @@ export default function CheckIn() {
   const [offlineExpanded, setOfflineExpanded] = useState(false);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F0F2F5' }}>
+    <div className="portal-page min-h-screen" style={{ backgroundColor: '#f1f4f7' }}>
 
       {/* ── Barra offline compacta ── */}
       <div
@@ -1578,7 +1578,7 @@ export default function CheckIn() {
             type="button"
             onClick={() => setOfflineExpanded((v) => !v)}
             className="w-full flex items-center justify-between py-2 text-xs font-medium"
-            style={{ color: isOnline ? '#1B4D8E' : '#92400E' }}
+            style={{ color: isOnline ? '#244ac0' : '#92400E' }}
           >
             <span className="flex items-center gap-1.5">
               {isOnline
@@ -1610,7 +1610,7 @@ export default function CheckIn() {
                   onClick={syncEventForOffline}
                   disabled={!isOnline || isSyncingData}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 disabled:opacity-50"
-                  style={{ backgroundColor: '#fff', border: '1px solid #BFDBFE', color: '#1B4D8E' }}
+                  style={{ backgroundColor: '#fff', border: '1px solid #BFDBFE', color: '#244ac0' }}
                 >
                   {isSyncingData ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                   Sincronizar dados
@@ -1620,7 +1620,7 @@ export default function CheckIn() {
                   onClick={syncPendingCheckIns}
                   disabled={!isOnline || isSyncingQueue || pendingToSyncCount === 0}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-all active:scale-95 disabled:opacity-50"
-                  style={{ backgroundColor: '#1B4D8E' }}
+                  style={{ backgroundColor: '#244ac0' }}
                 >
                   {isSyncingQueue ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                   Enviar pendentes
@@ -1641,13 +1641,18 @@ export default function CheckIn() {
         </div>
       </div>
 
-      <main className="max-w-lg mx-auto px-4 pt-4 pb-8">
+      <main className="portal-content portal-content-narrow">
+        <header className="portal-heading">
+          <span className="portal-eyebrow">Recepção · Check-in</span>
+          <h1>{eventTitle}</h1>
+          <p>Leia o ingresso ou busque o participante para registrar a entrada.</p>
+        </header>
 
         {/* ── KPIs ── */}
         <div className="grid grid-cols-2 gap-3 mb-5">
           <div
-            className="rounded-2xl p-4"
-            style={{ backgroundColor: '#fff', boxShadow: '0 2px 12px rgba(10,31,63,0.08)' }}
+            className="portal-stats"
+            style={{ backgroundColor: '#fff', boxShadow: 'none' }}
           >
             <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: '#9CA3AF' }}>
               Feitos
@@ -1657,8 +1662,8 @@ export default function CheckIn() {
             </p>
           </div>
           <div
-            className="rounded-2xl p-4"
-            style={{ backgroundColor: '#fff', boxShadow: '0 2px 12px rgba(10,31,63,0.08)' }}
+            className="portal-stats"
+            style={{ backgroundColor: '#fff', boxShadow: 'none' }}
           >
             <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: '#9CA3AF' }}>
               Pendentes
@@ -1759,7 +1764,7 @@ export default function CheckIn() {
             <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#C9A84C' }}>
               Método de check-in
             </p>
-            <h2 className="text-xl font-extrabold -mt-1 mb-4" style={{ color: '#0A1F3F' }}>
+            <h2 className="text-xl font-extrabold -mt-1 mb-4" style={{ color: '#172b46' }}>
               Como deseja registrar?
             </h2>
 
@@ -1776,12 +1781,12 @@ export default function CheckIn() {
               >
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: '#EBF2FB', color: '#1B4D8E' }}
+                  style={{ backgroundColor: '#EBF2FB', color: '#244ac0' }}
                 >
                   {icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-base" style={{ color: '#0A1F3F' }}>{title}</p>
+                  <p className="font-bold text-base" style={{ color: '#172b46' }}>{title}</p>
                   <p className="text-sm" style={{ color: '#6B7280' }}>{desc}</p>
                 </div>
                 <ArrowLeft className="w-5 h-5 rotate-180 flex-shrink-0" style={{ color: '#C9A84C' }} />
@@ -1800,13 +1805,13 @@ export default function CheckIn() {
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
                 style={{ backgroundColor: '#EBF2FB' }}
               >
-                <ArrowLeft className="w-4 h-4" style={{ color: '#1B4D8E' }} />
+                <ArrowLeft className="w-4 h-4" style={{ color: '#244ac0' }} />
               </button>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#C9A84C' }}>
                   {method === 'qrcode' ? 'QR Code' : 'Manual'}
                 </p>
-                <h2 className="text-lg font-extrabold leading-tight" style={{ color: '#0A1F3F' }}>
+                <h2 className="text-lg font-extrabold leading-tight" style={{ color: '#172b46' }}>
                   {method === 'qrcode' ? 'Escanear código' : 'Inserir código ou e-mail'}
                 </h2>
               </div>
@@ -1850,11 +1855,11 @@ export default function CheckIn() {
                             className="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors"
                             style={{
                               backgroundColor: isSelected ? '#EBF2FB' : '#fff',
-                              borderLeft: isSelected ? '3px solid #1B4D8E' : '3px solid transparent',
+                              borderLeft: isSelected ? '3px solid #244ac0' : '3px solid transparent',
                             }}
                           >
                             <div>
-                              <p className="text-sm font-semibold" style={{ color: '#0A1F3F' }}>{attendee.name}</p>
+                              <p className="text-sm font-semibold" style={{ color: '#172b46' }}>{attendee.name}</p>
                               {attendee.email && <p className="text-xs" style={{ color: '#9CA3AF' }}>{attendee.email}</p>}
                             </div>
                           </button>
@@ -1869,7 +1874,7 @@ export default function CheckIn() {
                   onClick={() => void handleLoadManualAttendees()}
                   disabled={isLoading || isLoadingManualAttendees || !manualCode.trim()}
                   className="w-full h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
-                  style={{ backgroundColor: '#F0F2F5', color: '#1B4D8E', border: '1.5px solid #1B4D8E' }}
+                  style={{ backgroundColor: '#f1f4f7', color: '#244ac0', border: '1.5px solid #244ac0' }}
                 >
                   {isLoadingManualAttendees
                     ? <><Loader2 className="w-4 h-4 animate-spin" />Buscando...</>
@@ -1884,7 +1889,7 @@ export default function CheckIn() {
                     (manualAttendees.length > 1 && !selectedManualAttendeeId)
                   }
                   className="w-full h-12 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
-                  style={{ backgroundColor: '#1B4D8E' }}
+                  style={{ backgroundColor: '#244ac0' }}
                 >
                   {isLoading
                     ? <><Loader2 className="w-4 h-4 animate-spin" />Processando...</>
@@ -1899,7 +1904,7 @@ export default function CheckIn() {
                 {/* Camera card — compacto e centralizado */}
                 <div className="flex justify-center">
                   <div
-                    className="rounded-3xl overflow-hidden w-full"
+                    className="rounded-2xl overflow-hidden w-full"
                     style={{ maxWidth: 300, backgroundColor: '#000', boxShadow: '0 4px 20px rgba(10,31,63,0.15)' }}
                   >
                     <div className="relative">
@@ -1954,7 +1959,7 @@ export default function CheckIn() {
                     className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: '#EBF2FB' }}
                   >
-                    <QrCode size={16} style={{ color: '#1B4D8E' }} />
+                    <QrCode size={16} style={{ color: '#244ac0' }} />
                   </div>
                   <p className="text-sm" style={{ color: '#374151' }}>
                     {scanStatus || 'Aponte para o QR Code do participante'}
@@ -1972,7 +1977,7 @@ export default function CheckIn() {
                   onClick={() => setMethod('manual')}
                   disabled={isLoading}
                   className="w-full h-12 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
-                  style={{ backgroundColor: '#F0F2F5', color: '#1B4D8E', border: '1.5px solid #1B4D8E' }}
+                  style={{ backgroundColor: '#f1f4f7', color: '#244ac0', border: '1.5px solid #244ac0' }}
                 >
                   Digitar código manualmente
                 </button>

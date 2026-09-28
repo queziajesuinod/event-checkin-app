@@ -29,10 +29,10 @@ import {
 } from "@/components/ui/dialog";
 
 const C = {
-  navy: "#0A1F3F",
-  blue: "#1B4D8E",
-  sky: "#4A90D9",
-  surface: "#F0F2F5",
+  navy: "#172b46",
+  blue: "#244ac0",
+  sky: "#55739a",
+  surface: "#f1f4f7",
   white: "#FFFFFF",
   green: "#16A34A",
   red: "#DC2626",
@@ -228,8 +228,8 @@ export default function CelulaPresenca() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-5" style={{ backgroundColor: C.surface }}>
-        <Skeleton className="h-32 rounded-3xl mb-5" />
+      <div className="portal-page min-h-screen p-5" style={{ backgroundColor: C.surface }}>
+        <Skeleton className="h-32 rounded-2xl mb-5" />
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-16 rounded-2xl" />
@@ -241,7 +241,7 @@ export default function CelulaPresenca() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-5" style={{ backgroundColor: C.surface }}>
+      <div className="portal-page portal-workspace min-h-screen flex flex-col items-center justify-center p-5" style={{ backgroundColor: C.surface }}>
         <AlertCircle className="w-14 h-14 mb-3" style={{ color: C.red }} />
         <p className="text-center font-medium mb-4" style={{ color: C.navy }}>
           {error ?? "Reunião não encontrada."}
@@ -257,12 +257,12 @@ export default function CelulaPresenca() {
   const presentes = Object.values(presencas).filter((v) => v === true).length;
 
   return (
-    <div className="min-h-screen flex flex-col pb-28" style={{ backgroundColor: C.surface }}>
+    <div className="portal-page portal-workspace min-h-screen flex flex-col pb-28" style={{ backgroundColor: C.surface }}>
       {/* Header */}
-      <div className="px-5 pt-6 pb-4">
+      <div className="portal-workspace-section px-5 pt-8 pb-6">
         <div
-          className="rounded-3xl p-5"
-          style={{ background: "linear-gradient(135deg, #16A34A, #22C55E)", boxShadow: "0 8px 24px #16A34A44" }}
+          className="portal-summary"
+          style={{ background: "#245d50", boxShadow: "none" }}
         >
           <p className="text-xs font-medium mb-1" style={{ color: "rgba(255,255,255,0.7)" }}>
             Reunião do dia
@@ -285,7 +285,7 @@ export default function CelulaPresenca() {
         </div>
       </div>
 
-      <div className="flex-1 px-5">
+      <div className="portal-workspace-section flex-1 px-5">
         {/* Membros */}
         {data.membros.length > 0 && (
           <>
@@ -486,7 +486,7 @@ export default function CelulaPresenca() {
 
       {/* ── Dialog: Pessoa avulsa ── */}
       <Dialog open={avulsoOpen} onOpenChange={setAvulsoOpen}>
-        <DialogContent className="rounded-3xl max-w-sm mx-4">
+        <DialogContent className="rounded-2xl max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle style={{ color: C.navy }}>Adicionar pessoa avulsa</DialogTitle>
           </DialogHeader>
@@ -548,7 +548,7 @@ export default function CelulaPresenca() {
 
       {/* ── Dialog: Relatório WhatsApp ── */}
       <Dialog open={relatorioOpen} onOpenChange={(o) => { setRelatorioOpen(o); if (!o) setLocation("/celula"); }}>
-        <DialogContent className="rounded-3xl max-w-sm mx-4">
+        <DialogContent className="rounded-2xl max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2" style={{ color: C.navy }}>
               <Share2 className="w-5 h-5" style={{ color: C.green }} />

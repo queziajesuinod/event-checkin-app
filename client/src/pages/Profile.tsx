@@ -9,10 +9,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 
 const C = {
-  navy: '#0A1F3F',
-  blue: '#1B4D8E',
+  navy: '#172b46',
+  blue: '#244ac0',
   gold: '#C9A84C',
-  surface: '#F0F2F5',
+  surface: '#f1f4f7',
   white: '#FFFFFF',
 };
 
@@ -235,14 +235,14 @@ export default function Profile({ onClose }: { onClose?: () => void }) {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: C.surface }}>
+      <div className="portal-page min-h-screen flex items-center justify-center" style={{ backgroundColor: C.surface }}>
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: C.blue }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
+    <div className="portal-page min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
 
       {/* ── Header ── */}
       <header
@@ -278,7 +278,7 @@ export default function Profile({ onClose }: { onClose?: () => void }) {
       </header>
 
       {/* ── Conteúdo ── */}
-      <main className="flex-1 px-4 py-6 space-y-4 w-full max-w-md mx-auto pb-10">
+      <main className="portal-content portal-content-narrow flex-1 space-y-5">
 
         {/* Feedback */}
         {feedback && (
@@ -375,7 +375,7 @@ export default function Profile({ onClose }: { onClose?: () => void }) {
             <div
               className="w-full h-11 px-3 rounded-xl text-sm flex items-center gap-2 select-none"
               style={{
-                backgroundColor: '#F0F2F5',
+                backgroundColor: '#f1f4f7',
                 border: '1.5px solid #E5E7EB',
                 color: '#9CA3AF',
                 cursor: 'not-allowed',

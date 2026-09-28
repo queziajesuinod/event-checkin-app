@@ -13,7 +13,7 @@ const LOGO =
   "https://images.squarespace-cdn.com/content/v1/5bc9186e34c4e27773d92870/1546175613378-UHI78Z3KGSEOFFJEAP0B/logo-site.png";
 
 const C = {
-  navy: "#0A1F3F",
+  navy: "#172b46",
   gold: "#C9A84C",
   white: "#FFFFFF",
 };
@@ -304,7 +304,7 @@ export default function VoluntariadoPublico() {
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6" style={{ backgroundColor: C.navy }}>
+    <div className="portal-page min-h-screen px-4 py-8 sm:px-6" style={{ backgroundColor: C.navy }}>
       <div className="mx-auto w-full max-w-2xl animate-in fade-in duration-500">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <button
@@ -355,8 +355,8 @@ export default function VoluntariadoPublico() {
         </div>
 
         <div
-          className="rounded-3xl p-5 shadow-xl sm:p-8"
-          style={{ backgroundColor: C.white, boxShadow: "0 16px 40px rgba(0,0,0,0.20)" }}
+          className="portal-document-card rounded-2xl p-6 sm:p-10"
+          style={{ backgroundColor: C.white, boxShadow: "0 12px 36px -24px rgba(0,0,0,0.2)" }}
         >
           {error && (
             <div
@@ -372,7 +372,7 @@ export default function VoluntariadoPublico() {
           {step === 1 && (
             <form onSubmit={continuarParaAreas} className="space-y-5">
               <div className="border-b pb-4" style={{ borderColor: "#E5E7EB" }}>
-                <h1 className="text-2xl font-extrabold" style={{ color: C.navy }}>
+                <h1 className="text-3xl font-semibold tracking-tight" style={{ color: C.navy }}>
                   Cadastro de Voluntários
                 </h1>
                 <p className="mt-1 text-sm" style={{ color: "#6B7280" }}>
@@ -484,7 +484,7 @@ export default function VoluntariadoPublico() {
           {step === 2 && (
             <div className="space-y-5">
               <div className="border-b pb-4" style={{ borderColor: "#E5E7EB" }}>
-                <h1 className="text-2xl font-extrabold" style={{ color: C.navy }}>
+                <h1 className="text-3xl font-semibold tracking-tight" style={{ color: C.navy }}>
                   Áreas de voluntariado
                 </h1>
                 <p className="mt-1 text-sm" style={{ color: "#6B7280" }}>

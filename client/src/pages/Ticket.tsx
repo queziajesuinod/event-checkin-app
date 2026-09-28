@@ -463,7 +463,7 @@ export default function Ticket() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="portal-page min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -506,7 +506,7 @@ export default function Ticket() {
     `R$ ${Number(value).toFixed(2).replace('.', ',')}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white py-12 px-4">
+    <div className="portal-page min-h-screen bg-background py-12 px-4">
       <div className="container max-w-2xl mx-auto space-y-6">
         {/* Header de Status */}
         <div className="text-center space-y-2">
@@ -536,12 +536,12 @@ export default function Ticket() {
         </div>
 
         {/* Card do Ticket */}
-        <Card>
+        <Card className="portal-document-card overflow-hidden pt-0">
           <CardHeader
-            className={`bg-gradient-to-r ${
+            className={`py-7 ${
               isCancelled
-                ? 'from-rose-500 to-rose-600'
-                : 'from-primary to-primary/80'
+                ? 'bg-rose-700'
+                : 'bg-[#172b46]'
             } text-white`}
           >
             <div className="flex flex-col gap-4">
@@ -581,7 +581,7 @@ export default function Ticket() {
                 Código: <span className="font-mono font-bold">{registration.orderCode}</span>
               </p>
               {isCancelled && (
-                <p className="text-sm text-rose-100 mt-2">
+                <p className="text-sm text-rose-700 mt-2">
                   Esta inscrição foi cancelada e não possui QR Code válido.
                 </p>
               )}

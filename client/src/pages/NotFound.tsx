@@ -2,9 +2,9 @@ import { AlertCircle, Home } from "lucide-react";
 import { useLocation } from "wouter";
 
 const C = {
-  navy: "#0A1F3F",
-  blue: "#1B4D8E",
-  surface: "#F0F2F5",
+  navy: "#172b46",
+  blue: "#244ac0",
+  surface: "#f1f4f7",
   gold: "#C9A84C",
 };
 
@@ -13,12 +13,12 @@ export default function NotFound() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-4"
+      className="portal-page min-h-screen flex flex-col items-center justify-center px-4"
       style={{ backgroundColor: C.surface }}
     >
       <div
-        className="w-full max-w-sm rounded-2xl p-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500"
-        style={{ backgroundColor: "#fff", boxShadow: "0 8px 32px rgba(10,31,63,0.12)" }}
+        className="portal-panel w-full max-w-md p-10 text-center"
+        style={{ backgroundColor: "#fff", boxShadow: "none" }}
       >
         <div className="flex justify-center mb-6">
           <div
@@ -49,7 +49,7 @@ export default function NotFound() {
         </button>
       </div>
 
-      <p className="text-xs mt-8" style={{ color: "#B0B7C3" }}>
+      <p className="text-xs mt-8" style={{ color: "#58697d" }}>
         IECG · Portal Gerencial
       </p>
     </div>

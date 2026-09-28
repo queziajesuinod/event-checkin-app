@@ -356,7 +356,7 @@ export default function Events() {
   const [offlineExpanded, setOfflineExpanded] = useState(false);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F0F2F5' }}>
+    <div className="portal-page min-h-screen" style={{ backgroundColor: '#f1f4f7' }}>
 
       {/* ── Barra offline colapsável ── */}
       <div style={{
@@ -368,7 +368,7 @@ export default function Events() {
             type="button"
             onClick={() => setOfflineExpanded(v => !v)}
             className="w-full flex items-center justify-between py-2 text-xs font-medium"
-            style={{ color: isOnline ? '#1B4D8E' : '#92400E' }}
+            style={{ color: isOnline ? '#244ac0' : '#92400E' }}
           >
             <span className="flex items-center gap-1.5">
               {isOnline
@@ -399,7 +399,7 @@ export default function Events() {
                 onClick={syncEvents}
                 disabled={!isOnline || isSyncing}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 disabled:opacity-50"
-                style={{ backgroundColor: '#fff', border: '1px solid #BFDBFE', color: '#1B4D8E' }}
+                style={{ backgroundColor: '#fff', border: '1px solid #BFDBFE', color: '#244ac0' }}
               >
                 {isSyncing
                   ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Sincronizando...</>
@@ -410,15 +410,15 @@ export default function Events() {
         </div>
       </div>
 
-      <main className="max-w-2xl mx-auto px-4 pt-5 pb-8">
+      <main className="portal-content">
 
         {/* ── Título ── */}
-        <div className="mb-4">
+        <div className="portal-heading">
           <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: '#C9A84C' }}>
             Disponíveis
           </p>
           <div className="flex items-end justify-between">
-            <h2 className="text-2xl font-extrabold" style={{ color: '#0A1F3F' }}>Eventos</h2>
+            <h2 className="text-2xl font-extrabold" style={{ color: '#172b46' }}>Eventos</h2>
             {!isLoading && events.length > 0 && (
               <span className="text-xs font-medium mb-1" style={{ color: '#9CA3AF' }}>
                 {events.length} evento{events.length > 1 ? 's' : ''}
@@ -440,7 +440,7 @@ export default function Events() {
         {/* ── Loading ── */}
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#1B4D8E' }} />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#244ac0' }} />
             <p className="text-sm" style={{ color: '#9CA3AF' }}>Carregando eventos...</p>
           </div>
 
@@ -453,15 +453,15 @@ export default function Events() {
               className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
               style={{ backgroundColor: '#EBF2FB' }}
             >
-              <Calendar className="w-8 h-8" style={{ color: '#4A90D9' }} />
+              <Calendar className="w-8 h-8" style={{ color: '#55739a' }} />
             </div>
-            <p className="font-semibold mb-1" style={{ color: '#0A1F3F' }}>Nenhum evento</p>
+            <p className="font-semibold mb-1" style={{ color: '#172b46' }}>Nenhum evento</p>
             <p className="text-sm" style={{ color: '#9CA3AF' }}>Não há eventos disponíveis no momento</p>
           </div>
 
         ) : (
           /* ── Lista de eventos ── */
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3">
             {events.map((event, i) => {
               const eventImageSrc = resolveEventImageSrc(event.imageUrl);
               const eventPeriod = formatEventPeriod(event);
@@ -471,10 +471,10 @@ export default function Events() {
                 <button
                   key={event.id}
                   onClick={() => setLocation(`/checkin/${event.id}`)}
-                  className="w-full text-left rounded-2xl overflow-hidden flex transition-all duration-200 active:scale-[0.98] animate-in fade-in slide-in-from-bottom-3 duration-400"
+                  className="portal-event-row w-full text-left rounded-xl overflow-hidden flex transition-colors duration-200"
                   style={{
                     backgroundColor: '#fff',
-                    boxShadow: '0 4px 16px rgba(10,31,63,0.09)',
+                    boxShadow: '0 4px 18px -14px rgba(23,43,70,0.18)',
                     animationDelay: `${i * 60}ms`,
                   }}
                 >
@@ -491,26 +491,26 @@ export default function Events() {
                         style={{ minHeight: '96px' }}
                       />
                     ) : (
-                      <Calendar className="w-8 h-8" style={{ color: '#4A90D9' }} />
+                      <Calendar className="w-8 h-8" style={{ color: '#55739a' }} />
                     )}
                   </div>
 
                   {/* Conteúdo */}
                   <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-between">
                     <div>
-                      <h3 className="text-sm font-bold leading-snug line-clamp-2 mb-1.5" style={{ color: '#0A1F3F' }}>
+                      <h3 className="text-sm font-bold leading-snug line-clamp-2 mb-1.5" style={{ color: '#172b46' }}>
                         {title}
                       </h3>
                       <div className="space-y-0.5">
                         {eventPeriod && (
                           <p className="flex items-center gap-1.5 text-xs" style={{ color: '#6B7280' }}>
-                            <Calendar className="w-3 h-3 flex-shrink-0" style={{ color: '#1B4D8E' }} />
+                            <Calendar className="w-3 h-3 flex-shrink-0" style={{ color: '#244ac0' }} />
                             {eventPeriod}
                           </p>
                         )}
                         {event.location && (
                           <p className="flex items-center gap-1.5 text-xs" style={{ color: '#6B7280' }}>
-                            <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: '#1B4D8E' }} />
+                            <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: '#244ac0' }} />
                             <span className="truncate">{event.location}</span>
                           </p>
                         )}
@@ -521,7 +521,7 @@ export default function Events() {
                     <div className="flex items-center justify-between mt-2.5">
                       <span
                         className="text-xs font-semibold flex items-center gap-1"
-                        style={{ color: '#1B4D8E' }}
+                        style={{ color: '#244ac0' }}
                       >
                         <Users className="w-3.5 h-3.5" />
                         Check-in
