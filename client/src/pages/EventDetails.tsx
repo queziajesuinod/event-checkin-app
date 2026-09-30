@@ -2148,7 +2148,7 @@ export default function EventDetails() {
             <div className="sticky top-24 space-y-4">
               {/* Imagem do evento */}
               {evento.imageUrl && (
-                <div className="rounded-2xl overflow-hidden aspect-[16/9] shadow-xl border border-white/20">
+                <div className="rounded-2xl overflow-hidden aspect-[4/3] shadow-xl border border-white/20">
                   <img src={evento.imageUrl} alt={evento.title} className="w-full h-full object-cover" />
                 </div>
               )}
@@ -2555,7 +2555,7 @@ export default function EventDetails() {
               <div className="sticky top-24 space-y-4">
                 {/* Imagem do evento */}
                 {evento.imageUrl && (
-                  <div className="rounded-2xl overflow-hidden aspect-[16/9] shadow-xl border border-white/20">
+                  <div className="rounded-2xl overflow-hidden aspect-[4/3] shadow-xl border border-white/20">
                     <img src={evento.imageUrl} alt={evento.title} className="w-full h-full object-cover" />
                   </div>
                 )}
