@@ -673,7 +673,7 @@ export default function EventDetails() {
     }, 0);
   };
 
-  const calcularDesconto = (subtotal: number) => {
+  const calcularDescontoCupom = (subtotal: number) => {
     if (!cupomValido) return 0;
     // fixed_price crava preco final por setor: o desconto vem calculado do servidor
     // (nao da pra recalcular no front sem a tabela de precos por setor).
@@ -685,6 +685,43 @@ export default function EventDetails() {
     }
     return Number(cupomValido.discountValue);
   };
+
+  // Desconto automático por quantidade (sem cupom). Espelha o backend
+  // (volumeDiscountService): preço-teto por ingresso quando o pedido atinge minQty.
+  const calcularDescontoQuantidade = (subtotal: number) => {
+    const qd = evento?.quantityDiscount;
+    if (
+      evento?.requiresPayment === false ||
+      !qd || qd.enabled === false || !Array.isArray(qd.tiers) || qd.tiers.length === 0
+    ) {
+      return { desconto: 0, priceEach: 0, minQty: 0, aplicado: false };
+    }
+    const precos = inscritos
+      .filter((i) => i.batchId)
+      .map((i) => {
+        const lote = lotesById.get(i.batchId!);
+        return lote ? Number(lote.price) : 0;
+      });
+    const qtd = precos.length;
+    let faixa: { minQty: number; priceEach: number } | null = null;
+    qd.tiers.forEach((t) => {
+      const minQty = Number(t.minQty);
+      if (qtd >= minQty && (!faixa || minQty > faixa.minQty)) {
+        faixa = { minQty, priceEach: Number(t.priceEach) };
+      }
+    });
+    if (!faixa) return { desconto: 0, priceEach: 0, minQty: 0, aplicado: false };
+    const escolhida: { minQty: number; priceEach: number } = faixa;
+    const precoFinal = precos.reduce((sum, p) => sum + Math.min(p, escolhida.priceEach), 0);
+    const desconto = Math.max(0, subtotal - precoFinal);
+    return { desconto, priceEach: escolhida.priceEach, minQty: escolhida.minQty, aplicado: desconto > 0 };
+  };
+
+  // Aplica o MELHOR entre cupom e desconto por quantidade (não acumula), igual ao backend.
+  const calcularDesconto = (subtotal: number) => Math.max(
+    calcularDescontoCupom(subtotal),
+    calcularDescontoQuantidade(subtotal).desconto,
+  );
 
   // Bandeira detectada pelos dígitos do cartão (repasse exato por bandeira).
   // Fallback 'visa' pré-visualiza o valor antes de o cartão ser digitado; ao
@@ -1332,6 +1369,12 @@ export default function EventDetails() {
   const cupomDigitado = cupomCodigo.trim();
   const subtotal = calcularSubtotal();
   const desconto = calcularDesconto(subtotal);
+  // Origem do desconto exibido: quantidade vence em empate (backend não consome cupom à toa).
+  const infoDescontoQtd = calcularDescontoQuantidade(subtotal);
+  const descontoCupomValor = calcularDescontoCupom(subtotal);
+  const descontoOrigem = desconto <= 0
+    ? null
+    : (infoDescontoQtd.aplicado && infoDescontoQtd.desconto >= descontoCupomValor ? 'quantidade' : 'cupom');
   const totalComTaxas = calcularValorTotal();
   const taxasAplicados = Math.max(0, totalComTaxas - Math.max(0, subtotal - desconto));
   const selectedPaymentOption = useMemo(
@@ -1514,6 +1557,23 @@ export default function EventDetails() {
       (sum, lote) => sum + (quantities[lote.id] || 0) * Number(lote.price),
       0
     );
+    // Prévia do desconto automático por quantidade (preço-teto), igual ao checkout.
+    const precosSelecionados: number[] = [];
+    lotes.forEach((lote) => {
+      const q = quantities[lote.id] || 0;
+      for (let i = 0; i < q; i++) precosSelecionados.push(Number(lote.price));
+    });
+    const qdPre = evento.requiresPayment === false ? null : evento.quantityDiscount;
+    const faixaPreSel = (qdPre && qdPre.enabled !== false && Array.isArray(qdPre.tiers))
+      ? (qdPre.tiers
+        .map((t) => ({ minQty: Number(t.minQty), priceEach: Number(t.priceEach) }))
+        .filter((t) => precosSelecionados.length >= t.minQty)
+        .sort((a, b) => b.minQty - a.minQty)[0] || null)
+      : null;
+    const totalAmountComDesconto = faixaPreSel
+      ? precosSelecionados.reduce((sum, p) => sum + Math.min(p, faixaPreSel.priceEach), 0)
+      : totalAmount;
+    const temDescontoPre = faixaPreSel && totalAmountComDesconto < totalAmount;
 
     const increment = (batchId: string) => {
       if (totalQty >= maxPerBuyer) return;
@@ -1796,10 +1856,22 @@ export default function EventDetails() {
                 <div className="border-t border-slate-100 mt-5 pt-4 space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-slate-600">Total Ingresso</span>
-                    <span className="text-lg font-bold text-slate-900">
-                      R$ {totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <span className="text-right">
+                      {temDescontoPre && (
+                        <span className="block text-xs text-slate-400 line-through">
+                          R$ {totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      )}
+                      <span className="text-lg font-bold text-slate-900">
+                        R$ {totalAmountComDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
                     </span>
                   </div>
+                  {temDescontoPre && faixaPreSel && (
+                    <p className="text-xs text-green-700 -mt-2">
+                      Desconto por quantidade: máx. R$ {faixaPreSel.priceEach.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} por ingresso a partir de {faixaPreSel.minQty}.
+                    </p>
+                  )}
                   <Button
                     onClick={iniciarComQuantidades}
                     disabled={totalQty === 0}
@@ -2519,10 +2591,13 @@ export default function EventDetails() {
                         <span className="text-slate-600">Subtotal</span>
                         <span className="text-slate-900 tabular-nums">R$ {subtotal.toFixed(2)}</span>
                       </div>
-                      {cupomValido && desconto > 0 && (
+                      {desconto > 0 && (
                         <div className="flex justify-between">
                           <span className="text-green-700 flex items-center gap-1">
-                            <Tag className="h-3.5 w-3.5" />Cupom
+                            <Tag className="h-3.5 w-3.5" />
+                            {descontoOrigem === 'quantidade'
+                              ? `Desconto (${infoDescontoQtd.minQty}+ ingressos)`
+                              : 'Cupom'}
                           </span>
                           <span className="text-green-700 tabular-nums">− R$ {Math.min(desconto, subtotal).toFixed(2)}</span>
                         </div>

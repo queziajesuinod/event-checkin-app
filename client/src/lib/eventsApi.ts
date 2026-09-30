@@ -75,6 +75,12 @@ export interface Event {
   waitlistOfferTtlHours?: number;
   allowBelowMinimumDeposit?: boolean;
   belowMinDepositTtlHours?: number;
+  // Desconto automático por quantidade (sem cupom): preço-teto por ingresso quando
+  // o pedido atinge a quantidade mínima da faixa. Configurado no admin do portal.
+  quantityDiscount?: {
+    enabled?: boolean;
+    tiers?: Array<{ minQty: number; priceEach: number }>;
+  } | null;
 }
 
 export interface LiabilityTerm {
