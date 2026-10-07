@@ -221,7 +221,15 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
                 src={template.logoImage}
                 alt=""
                 style={{
-                  position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', opacity: template.logoBackground.opacity ?? 0.15, pointerEvents: 'none',
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  opacity: template.logoBackground.opacity ?? 0.15,
+                  pointerEvents: 'none',
+                  transform: template.logoBackground.rotation ? `rotate(${template.logoBackground.rotation}deg)` : undefined,
+                  transformOrigin: 'center',
                 }}
               />
             ) : null}

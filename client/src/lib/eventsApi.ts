@@ -674,7 +674,7 @@ export interface LabelTemplateResponse {
     heightMm: number | string;
     elements: LabelElement[];
     logoImage?: string | null;
-    logoBackground?: { enabled: boolean; opacity: number } | null;
+    logoBackground?: { enabled: boolean; opacity: number; rotation?: number } | null;
   };
 }
 
