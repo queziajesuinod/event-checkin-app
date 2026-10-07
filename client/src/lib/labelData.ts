@@ -49,3 +49,43 @@ export async function montarEtiqueta(
   };
   return { template: tplResp.template, items: [item] };
 }
+
+/**
+ * Monta as etiquetas de TODOS os inscritos de um pedido (modelo do evento +
+ * dados do lookup público). Usado na tela do ingresso para imprimir as etiquetas
+ * direto na impressora, no formato da etiqueta.
+ * Retorna null se o evento não tem modelo de etiqueta configurado.
+ */
+export async function montarEtiquetasPedido(
+  eventId: string,
+  orderCode: string,
+): Promise<{ template: LabelTemplateResponse['template']; items: LabelRenderItem[] } | null> {
+  const [tplResp, registros] = await Promise.all([
+    buscarModeloEtiqueta(eventId),
+    buscarIngressosPublico(orderCode),
+  ]);
+  if (!tplResp?.template) return null;
+
+  const reg = registros.find((r) => r.orderCode === orderCode);
+  const toStr = (v: unknown) => (v == null ? '' : String(v));
+
+  const items: LabelRenderItem[] = (reg?.attendees || []).map((att) => {
+    const fields: Record<string, string> = {};
+    if (reg?.buyerData) Object.entries(reg.buyerData).forEach(([k, v]) => { fields[k] = toStr(v); });
+    if (att.attendeeData) Object.entries(att.attendeeData).forEach(([k, v]) => { fields[k] = toStr(v); });
+    return {
+      key: `${reg!.orderCode}-${att.id}`,
+      attendeeName: att.name,
+      sector: att.batch?.sector || '',
+      batchName: att.batch?.name || '',
+      eventTitle: tplResp.event.title,
+      orderCode: reg!.orderCode,
+      attendeeId: att.id,
+      eventId,
+      eventImage: tplResp.event.imageUrl || null,
+      fields,
+    };
+  });
+
+  return { template: tplResp.template, items };
+}

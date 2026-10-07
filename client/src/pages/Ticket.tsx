@@ -2,13 +2,15 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin, Users, Download, Loader2, CheckCircle2, XCircle, FileText } from 'lucide-react';
+import { Calendar, MapPin, Users, Loader2, CheckCircle2, XCircle, FileText, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
-import jsPDF from 'jspdf';
 import { formatEventDate, formatEventDateTime } from '../lib/eventDateTime';
 import { UpgradeSectorDialog } from '@/components/UpgradeSectorDialog';
 import { ArrowUpRight, Pencil } from 'lucide-react';
+import { LabelSheet, type LabelRenderItem } from '@/components/LabelSheet';
+import { montarEtiquetasPedido } from '@/lib/labelData';
+import type { LabelTemplateResponse } from '@/lib/eventsApi';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -101,51 +103,6 @@ const TicketDivider = () => (
   <div className="h-px w-full bg-border/50" role="presentation" />
 );
 
-const detectPdfImageFormat = (dataUrl: string): 'PNG' | 'JPEG' | 'WEBP' => {
-  const match = dataUrl.match(/^data:image\/([^;]+);base64,/i);
-  if (!match) {
-    return 'PNG';
-  }
-  const mime = match[1].toLowerCase();
-  if (mime.includes('jpeg') || mime.includes('jpg')) {
-    return 'JPEG';
-  }
-  if (mime.includes('webp')) {
-    return 'WEBP';
-  }
-  return 'PNG';
-};
-
-const createCircularPngDataUrl = async (dataUrl: string, size = 256): Promise<string | null> => {
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Imagem inválida'));
-      img.src = dataUrl;
-    });
-
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    ctx.clearRect(0, 0, size, size);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(image, 0, 0, size, size);
-    ctx.restore();
-
-    return canvas.toDataURL('image/png');
-  } catch {
-    return null;
-  }
-};
-
 const normalizeStatus = (status?: string | null) =>
   (status ?? '').trim().toLowerCase();
 
@@ -165,6 +122,8 @@ export default function Ticket() {
   const [editAttendee, setEditAttendee] = useState<{ id: string; name: string } | null>(null);
   const [editNome, setEditNome] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [labelPrint, setLabelPrint] = useState<{ template: LabelTemplateResponse['template']; items: LabelRenderItem[] } | null>(null);
+  const [printingLabel, setPrintingLabel] = useState(false);
 
   const loadRegistration = useCallback(async (orderCode: string) => {
     try {
@@ -181,6 +140,7 @@ export default function Ticket() {
 
       const cancelled = isCancelledStatus(data.paymentStatus);
       setAttendeeQRCodes({});
+      setLabelPrint(null); // dados recarregados → força reconstruir a etiqueta na próxima impressão
 
       if (cancelled) {
         return;
@@ -260,204 +220,28 @@ export default function Ticket() {
     loadRegistration(params.orderCode);
   }, [match, params?.orderCode, navigate, loadRegistration]);
 
-  const safeText = (value: unknown) => (value === undefined || value === null ? '' : String(value));
-
-  const downloadTicket = async () => {
-    if (!registration) return;
-
+  // Imprime SÓ a etiqueta, direto na impressora, no formato da etiqueta
+  // (mesmo mecanismo da retirada do kit: LabelSheet com screenHidden + autoPrint).
+  const imprimirEtiqueta = async () => {
+    if (!registration?.event?.id) return;
+    // Já preparada: só reenvia para a impressora.
+    if (labelPrint) { window.print(); return; }
+    setPrintingLabel(true);
     try {
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      const dateRangeLabel = formatEventDateRange(registration.event);
-      const headerDetailText = `${dateRangeLabel} • ${safeText(registration.event.location)}`;
-      let yOffset = margin;
-      const circularHeaderImageDataUrl = eventImageDataUrl
-        ? await createCircularPngDataUrl(eventImageDataUrl)
-        : null;
-
-      const headerImageSize = 48;
-      const headerTextGap = 10;
-
-      const drawFullHeader = () => {
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(16);
-       
-        const headerTextX = margin + headerImageSize + headerTextGap;
-        const headerTextWidth = pageWidth - headerTextX - margin;
-        const headerNameLines = pdf.splitTextToSize(
-          safeText(registration.event.title),
-          headerTextWidth
-        );
-        const headerDetailLines = pdf.splitTextToSize(headerDetailText, headerTextWidth);
-
-        if (circularHeaderImageDataUrl) {
-          pdf.addImage(
-            circularHeaderImageDataUrl,
-            'PNG',
-            margin,
-            margin,
-            headerImageSize,
-            headerImageSize
-          );
-        } else if (eventImageDataUrl) {
-          const format = detectPdfImageFormat(eventImageDataUrl);
-          pdf.addImage(eventImageDataUrl, format, margin, margin, headerImageSize, headerImageSize);
-        } else {
-          pdf.setFillColor(244, 244, 244);
-          pdf.setDrawColor(220);
-          pdf.rect(margin, margin, headerImageSize, headerImageSize, 'F');
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(26);
-          const initial = (registration.event.title?.charAt(0) || '?').toUpperCase();
-          pdf.text(
-            initial,
-            margin + headerImageSize / 2,
-            margin + headerImageSize / 2 + 9,
-            { align: 'center' }
-          );
-          pdf.setFillColor(255, 255, 255);
-          pdf.setDrawColor(0);
-        }
-
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(16);
-        const textStartY = margin + 16;
-        headerNameLines.forEach((line: string, index: number) => {
-          pdf.text(line, headerTextX, textStartY + index * 7);
-        });
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        const detailStartY = textStartY + headerNameLines.length * 7 + 5;
-        headerDetailLines.forEach((line: string, index: number) => {
-          pdf.text(line, headerTextX, detailStartY + index * 5.5);
-        });
-
-        const headerTextEndY = detailStartY + headerDetailLines.length * 5.5;
-        const headerHeight = Math.max(headerImageSize, headerTextEndY - margin);
-        yOffset = margin + headerHeight + 12;
-
-        pdf.setDrawColor(200);
-        pdf.setLineWidth(0.3);
-        pdf.line(margin, yOffset - 8, pageWidth - margin, yOffset - 8);
-        pdf.setDrawColor(0);
-        pdf.setLineWidth(0.2);
-        yOffset += 6;
-      };
-
-      const drawMiniHeader = () => {
-        const miniWidth = pageWidth - margin * 2;
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(14);
-        const titleLines = pdf.splitTextToSize(safeText(registration.event.title), miniWidth);
-        titleLines.forEach((line: string, index: number) => {
-          pdf.text(line, margin, margin + 10 + index * 6);
-        });
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        const detailLines = pdf.splitTextToSize(headerDetailText, miniWidth);
-        const detailStartY = margin + 10 + titleLines.length * 6 + 5;
-        detailLines.forEach((line: string, index: number) => {
-          pdf.text(line, margin, detailStartY + index * 5);
-        });
-
-        yOffset = detailStartY + detailLines.length * 5 + 8;
-        pdf.setDrawColor(200);
-        pdf.setLineWidth(0.3);
-        pdf.line(margin, yOffset - 6, pageWidth - margin, yOffset - 6);
-        pdf.setDrawColor(0);
-        pdf.setLineWidth(0.2);
-        yOffset += 6;
-      };
-
-      drawFullHeader();
-
-      const attendeesPerPage = 4;
-      const cardHeight = 40;
-      const cardSpacing = 7;
-      const qrSize = 24;
-      const qrX = pageWidth - margin - qrSize;
-      const cardTextWidth = pageWidth - margin * 2 - qrSize - 14;
-      const requiredPageHeight =
-        attendeesPerPage * cardHeight + (attendeesPerPage - 1) * cardSpacing;
-      const pageBottomLimit = pageHeight - margin;
-      let attendeeIndexOnPage = 0;
-
-      if (yOffset + requiredPageHeight > pageBottomLimit) {
-        pdf.addPage();
-        drawMiniHeader();
+      const et = await montarEtiquetasPedido(registration.event.id, registration.orderCode);
+      if (!et) {
+        toast.error('Este evento não tem um modelo de etiqueta configurado.');
+        return;
       }
-
-      registration.attendees.forEach((attendee, index) => {
-        if (index > 0 && index % attendeesPerPage === 0) {
-          pdf.addPage();
-          drawMiniHeader();
-          attendeeIndexOnPage = 0;
-        }
-
-        const participantName =
-          attendee.attendeeData.nome_completo ||
-          attendee.attendeeData.nome_do_inscrito ||
-          attendee.attendeeData.nome ||
-          `Inscrito ${index + 1}`;
-        const nameLine = pdf.splitTextToSize(
-          `Participante: ${safeText(participantName)}`,
-          cardTextWidth
-        )[0];
-        const lotLine = pdf.splitTextToSize(
-          `Lote: ${safeText(attendee.batch.name)}`,
-          cardTextWidth
-        )[0];
-
-        const cardTop = yOffset + attendeeIndexOnPage * (cardHeight + cardSpacing);
-
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(9);
-        pdf.text(nameLine, margin, cardTop + 11);
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        pdf.text(lotLine, margin, cardTop + 18);
-        pdf.text(`Código: ${safeText(registration.orderCode)}`, margin, cardTop + 25);
-
-        const qrY = cardTop + (cardHeight - qrSize) / 2;
-        const attendeeQr = attendeeQRCodes[attendee.id];
-        if (attendeeQr) {
-          pdf.addImage(attendeeQr, 'PNG', qrX, qrY, qrSize, qrSize);
-        } else {
-          pdf.setDrawColor(200);
-          pdf.rect(qrX, qrY, qrSize, qrSize);
-          pdf.setDrawColor(0);
-        }
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(7);
-        pdf.text(`${index + 1}/${registration.attendees.length}`, qrX + qrSize / 2, cardTop + cardHeight - 4, {
-          align: 'center',
-        });
-
-        (pdf as any).setLineDash([3, 1]);
-        pdf.setDrawColor(200);
-        pdf.line(margin, cardTop + cardHeight, pageWidth - margin, cardTop + cardHeight);
-        (pdf as any).setLineDash([]);
-        pdf.setDrawColor(0);
-
-        attendeeIndexOnPage += 1;
-      });
-
-      pdf.save(`ticket-${registration.orderCode}.pdf`);
-
-      toast.success('Sucesso!', {
-        description: 'Ticket baixado com sucesso',
-      });
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      toast.error('Erro', {
-        description: 'Não foi possível gerar o PDF',
-      });
+      if (et.items.length === 0) {
+        toast.error('Nenhum inscrito encontrado para gerar a etiqueta.');
+        return;
+      }
+      setLabelPrint(et); // o autoPrint do LabelSheet dispara a impressão ao ficar pronto
+    } catch {
+      toast.error('Não foi possível preparar a etiqueta.');
+    } finally {
+      setPrintingLabel(false);
     }
   };
 
@@ -507,6 +291,7 @@ export default function Ticket() {
 
   return (
     <div className="portal-page min-h-screen bg-background py-12 px-4">
+      {labelPrint && <LabelSheet template={labelPrint.template} items={labelPrint.items} screenHidden autoPrint />}
       <div className="container max-w-2xl mx-auto space-y-6">
         {/* Header de Status */}
         <div className="text-center space-y-2">
@@ -766,21 +551,30 @@ export default function Ticket() {
               </Button>
             )}
 
-            {!isCancelled && !isPartial ? (
+            {!isCancelled ? (
               <>
-                <Button onClick={downloadTicket} className="w-full" size="lg">
-                  <Download className="w-4 h-4 mr-2" />
-                  Baixar Ticket (PDF)
+                <Button
+                  onClick={imprimirEtiqueta}
+                  className="w-full"
+                  size="lg"
+                  disabled={printingLabel}
+                >
+                  {printingLabel ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Printer className="w-4 h-4 mr-2" />
+                  )}
+                  Imprimir etiqueta
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  Guarde este ticket! Você precisará dele para entrar no evento.
+                  Apresente o QR Code na entrada do evento. Se precisar, imprima sua etiqueta aqui.
                 </p>
               </>
-            ) : isCancelled ? (
+            ) : (
               <p className="text-xs text-center text-rose-600">
                 Este pedido foi cancelado e não é possível gerar ou apresentar o ticket.
               </p>
-            ) : null}
+            )}
 
             {!isCancelled && registration.hasSignedTerm && (
               <Button
