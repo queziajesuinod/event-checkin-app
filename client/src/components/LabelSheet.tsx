@@ -146,6 +146,9 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
       display: 'flex',
       alignItems: 'center',
       justifyContent: el.align === 'center' ? 'center' : el.align === 'right' ? 'flex-end' : 'flex-start',
+      // Rotação do elemento (ex.: 90° para etiqueta impressa em pé).
+      transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+      transformOrigin: 'center',
     };
     if (el.type === 'qr') {
       const url = qrMap[item.key];

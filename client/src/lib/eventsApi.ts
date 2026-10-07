@@ -663,6 +663,7 @@ export interface LabelElement {
   uppercase?: boolean;
   nameFormat?: 'full' | 'first_last';
   opacity?: number;
+  rotation?: number;
 }
 export interface LabelTemplateResponse {
   event: { id: string; title: string; imageUrl?: string | null };
