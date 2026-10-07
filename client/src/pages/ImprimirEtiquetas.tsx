@@ -189,7 +189,21 @@ export default function ImprimirEtiquetas() {
 
   useEffect(() => () => stopScan(), [stopScan]);
 
-  const imprimir = () => window.print();
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  // Impressão no tamanho exato do modelo (PDF). Fallback: window.print() se falhar.
+  const imprimir = async () => {
+    if (!tpl?.template) { window.print(); return; }
+    try {
+      setGerandoPdf(true);
+      const { imprimirEtiquetasPdf } = await import('@/lib/labelPdf');
+      await imprimirEtiquetasPdf(Number(tpl.template.widthMm), Number(tpl.template.heightMm));
+    } catch (err) {
+      console.error('Falha ao gerar PDF da etiqueta, usando impressão padrão:', err);
+      window.print();
+    } finally {
+      setGerandoPdf(false);
+    }
+  };
 
   return (
     <div className="portal-page min-h-dvh bg-background">
@@ -299,10 +313,17 @@ export default function ImprimirEtiquetas() {
                   <p className="text-lg font-semibold">{itens.length} etiqueta(s) encontrada(s)</p>
                   <p className="text-sm text-muted-foreground">Tamanho {widthMm}×{heightMm} mm — confira a pré-visualização abaixo.</p>
                 </div>
-                <Button onClick={imprimir} size="lg" className="h-12 w-full gap-2 text-base sm:w-auto sm:px-8">
+                <Button onClick={imprimir} disabled={gerandoPdf} size="lg" className="h-12 w-full gap-2 text-base sm:w-auto sm:px-8">
                   <Printer className="h-5 w-5" aria-hidden="true" />
-                  Imprimir {itens.length} etiqueta(s)
+                  {gerandoPdf ? 'Gerando...' : `Imprimir ${itens.length} etiqueta(s)`}
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="no-print text-xs text-muted-foreground underline"
+                >
+                  Usar impressão do navegador (se o PDF não funcionar)
+                </button>
               </div>
             )}
           </>
