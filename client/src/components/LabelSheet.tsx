@@ -35,6 +35,8 @@ export interface LabelRenderItem {
   attendeeId: string;
   eventId: string;
   eventImage?: string | null;
+  /** Campos do formulário (comprador + inscrito) por fieldName, para campos arbitrários da etiqueta. */
+  fields?: Record<string, string>;
 }
 
 type Template = LabelTemplateResponse['template'];
@@ -87,13 +89,17 @@ function resolveField(field: string | null, item: LabelRenderItem): string {
     case 'batchName': return item.batchName || '';
     case 'eventTitle': return item.eventTitle || '';
     case 'orderCode': return item.orderCode || '';
-    default: return '';
+    default:
+      // Campo arbitrário do formulário (comprador/inscrito), resolvido por fieldName.
+      return (field && item.fields && item.fields[field]) || '';
   }
 }
 
 export function LabelSheet({ template, items, screenHidden = false, autoPrint = false }: Props) {
-  const widthMm = num(template.widthMm);
-  const heightMm = num(template.heightMm);
+  // Fallback para o tamanho padrão da etiqueta: dimensão 0/ausente geraria
+  // "@page { size: 0mm 0mm }" (inválido) e o navegador cairia no padrão A4.
+  const widthMm = num(template.widthMm) || 90;
+  const heightMm = num(template.heightMm) || 29;
   const temQr = useMemo(() => (template.elements || []).some((e) => e.type === 'qr'), [template]);
   const [qrMap, setQrMap] = useState<Record<string, string>>({});
   const printedRef = useRef<string | null>(null);
@@ -146,7 +152,19 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
       return <div key={el.id} style={style}>{url ? <img src={url} alt="QR" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : null}</div>;
     }
     if (el.type === 'logo') {
-      return <div key={el.id} style={style}>{item.eventImage ? <img src={item.eventImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : null}</div>;
+      // Logo própria da etiqueta (upload); fallback para a capa do evento (modelos antigos).
+      const logoSrc = template.logoImage || item.eventImage;
+      return (
+        <div key={el.id} style={style}>
+          {logoSrc ? (
+            <img
+              src={logoSrc}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: el.opacity ?? 1 }}
+            />
+          ) : null}
+        </div>
+      );
     }
     let value = el.type === 'field' ? resolveField(el.field, item) : (el.text || '');
     if (el.type === 'field' && el.field === 'attendeeName' && el.nameFormat === 'first_last') {
@@ -195,6 +213,15 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
             className="etiqueta relative overflow-hidden rounded-md bg-white ring-1 ring-black/10 shadow-sm"
             style={{ width: `${widthMm}mm`, height: `${heightMm}mm`, boxSizing: 'border-box' }}
           >
+            {template.logoBackground?.enabled && template.logoImage ? (
+              <img
+                src={template.logoImage}
+                alt=""
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', opacity: template.logoBackground.opacity ?? 0.15, pointerEvents: 'none',
+                }}
+              />
+            ) : null}
             {(template.elements || []).map((el) => renderElemento(el, item))}
           </div>
         ))}

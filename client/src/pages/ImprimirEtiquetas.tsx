@@ -77,8 +77,12 @@ export default function ImprimirEtiquetas() {
         (r) => r.event?.id === eventId && (r.paymentStatus === 'confirmed' || r.paymentStatus === 'partial')
       );
       const labels: LabelRenderItem[] = [];
+      const toStr = (v: unknown) => (v == null ? '' : String(v));
       doEvento.forEach((r) => {
         (r.attendees || []).forEach((att) => {
+          const fields: Record<string, string> = {};
+          if (r.buyerData) Object.entries(r.buyerData).forEach(([k, v]) => { fields[k] = toStr(v); });
+          if (att.attendeeData) Object.entries(att.attendeeData).forEach(([k, v]) => { fields[k] = toStr(v); });
           labels.push({
             key: `${r.orderCode}-${att.id}`,
             attendeeName: att.name,
@@ -89,6 +93,7 @@ export default function ImprimirEtiquetas() {
             eventId: r.event!.id,
             eventTitle: r.event!.title,
             eventImage: r.event!.imageUrl || tpl?.event?.imageUrl || null,
+            fields,
           });
         });
       });

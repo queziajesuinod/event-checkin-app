@@ -15,6 +15,17 @@ export default function PixConfirmation() {
   const orderCode = searchParams.get('orderCode');
   const pixCode = searchParams.get('pixCode');
   const pixQrCodeBase64 = searchParams.get('qrCode');
+  const thankYouUrl = searchParams.get('thankYouUrl');
+
+  // Evento online com "link de obrigado": redireciona externo; senão, tela do ingresso.
+  const irAposPagamento = () => {
+    if (thankYouUrl) {
+      const destino = /^https?:\/\//i.test(thankYouUrl) ? thankYouUrl : `https://${thankYouUrl}`;
+      window.location.href = destino;
+      return;
+    }
+    setLocation(`/ticket/${orderCode}`);
+  };
 
   useEffect(() => {
     if (!orderCode || !pixCode) {
@@ -39,7 +50,7 @@ export default function PixConfirmation() {
               description: 'Redirecionando para o seu ticket...',
             });
             setTimeout(() => {
-              setLocation(`/ticket/${orderCode}`);
+              irAposPagamento();
             }, 1500);
           }
         }

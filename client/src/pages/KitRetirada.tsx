@@ -14,8 +14,6 @@ import {
 
 type Estado = 'carregando' | 'idle' | 'scanning' | 'processando' | 'resultado' | 'erroConfig';
 
-const SEGUNDOS_ANTES_IMPRESSAO = 10;
-
 // Texto legível (preto/branco) sobre uma cor de fundo
 function textoSobre(bg: string): '#0b1220' | '#ffffff' {
   const h = (bg || '').replace('#', '');
@@ -36,7 +34,6 @@ export default function KitRetirada() {
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<KitDeliveryResponse | null>(null);
   const [labelPrint, setLabelPrint] = useState<{ template: LabelTemplateResponse['template']; items: any[] } | null>(null);
-  const [contagem, setContagem] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -44,9 +41,6 @@ export default function KitRetirada() {
   const jsqrRef = useRef<((d: Uint8ClampedArray, w: number, h: number) => { data: string } | null) | null>(null);
   const busyRef = useRef(false);
   const scanSessionRef = useRef(0);
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const labelRef = useRef<{ template: LabelTemplateResponse['template']; items: any[] } | null>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -71,22 +65,14 @@ export default function KitRetirada() {
     if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
   }, []);
 
-  const limparTimers = useCallback(() => {
-    if (resetTimer.current) { clearTimeout(resetTimer.current); resetTimer.current = null; }
-    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
-  }, []);
-
   const resetar = useCallback(() => {
     stopScan();
-    limparTimers();
     setResultado(null);
     setLabelPrint(null);
     setErro(null);
-    setContagem(null);
-    labelRef.current = null;
     busyRef.current = false;
     setEstado('idle');
-  }, [limparTimers, stopScan]);
+  }, [stopScan]);
 
   const processarQr = useCallback(async (raw: string) => {
     if (busyRef.current) return;
@@ -105,7 +91,7 @@ export default function KitRetirada() {
     }
     if (!orderCode) {
       setErro('QR Code inválido.'); setResultado(null); setEstado('resultado');
-      resetTimer.current = setTimeout(resetar, 5000); busyRef.current = false; return;
+      busyRef.current = false; return;
     }
 
     try {
@@ -113,38 +99,20 @@ export default function KitRetirada() {
       setResultado(r);
       setEstado('resultado');
 
+      // Imprime assim que a etiqueta estiver pronta; a tela permanece até
+      // o operador tocar em "Próxima retirada".
       if (r.delivered && r.imprimeEtiqueta) {
         const et = await montarEtiqueta(eventId, r.orderCode, r.attendeeId, r.attendeeName);
-        labelRef.current = et;
-        if (et) {
-          setContagem(SEGUNDOS_ANTES_IMPRESSAO);
-          countdownRef.current = setInterval(() => {
-            setContagem((c) => {
-              if (c === null) return c;
-              if (c <= 1) {
-                if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
-                setLabelPrint(labelRef.current);
-                resetTimer.current = setTimeout(resetar, 5000);
-                return 0;
-              }
-              return c - 1;
-            });
-          }, 1000);
-        } else {
-          resetTimer.current = setTimeout(resetar, SEGUNDOS_ANTES_IMPRESSAO * 1000);
-        }
-      } else {
-        resetTimer.current = setTimeout(resetar, r.delivered ? 8000 : 6000);
+        if (et) setLabelPrint(et);
       }
     } catch (err: any) {
       setErro(err?.response?.data?.message || 'Não foi possível validar este ingresso.');
       setResultado(null);
       setEstado('resultado');
-      resetTimer.current = setTimeout(resetar, 6000);
     } finally {
       busyRef.current = false;
     }
-  }, [eventId, stopScan, resetar]);
+  }, [eventId, stopScan]);
 
   const startScan = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) { setErro('Câmera não suportada neste dispositivo.'); setEstado('resultado'); return; }
@@ -202,12 +170,11 @@ export default function KitRetirada() {
     }
   }, [processarQr, stopScan]);
 
-  useEffect(() => () => { stopScan(); limparTimers(); }, [stopScan, limparTimers]);
+  useEffect(() => () => { stopScan(); }, [stopScan]);
 
   const entregue = Boolean(resultado?.delivered && resultado.kit);
   const corKit = entregue ? (resultado!.kit!.color || '#16a34a') : '';
   const fg = entregue ? textoSobre(corKit) : '#fff';
-  const progresso = contagem != null ? ((SEGUNDOS_ANTES_IMPRESSAO - contagem) / SEGUNDOS_ANTES_IMPRESSAO) * 100 : 0;
   const etapa = estado === 'resultado' ? 3 : estado === 'scanning' || estado === 'processando' ? 2 : 1;
 
   return (
@@ -326,8 +293,7 @@ export default function KitRetirada() {
                     <p>Apresente esta confirmação à equipe e retire seu kit.</p>
                     {resultado!.imprimeEtiqueta && (
                       <div className="kit-print-status">
-                        <div><Printer size={20} aria-hidden="true" /><span>{labelPrint ? 'Imprimindo etiqueta…' : contagem !== null ? `Impressão em ${contagem}s` : 'Preparando etiqueta…'}</span></div>
-                        {!labelPrint && contagem !== null && <div className="kit-progress" role="progressbar" aria-label="Tempo até a impressão" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progresso}><span style={{ width: `${progresso}%` }} /></div>}
+                        <div><Printer size={20} aria-hidden="true" /><span>{labelPrint ? 'Imprimindo etiqueta…' : 'Preparando etiqueta…'}</span></div>
                       </div>
                     )}
                   </div>

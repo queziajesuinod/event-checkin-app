@@ -342,6 +342,18 @@ export default function EventDetails() {
     }
   };
 
+  // Após pagamento confirmado: evento online com "link de obrigado" redireciona para
+  // a página externa; caso contrário segue para a tela do ingresso.
+  const irParaPosPagamento = (orderCode: string) => {
+    const url = (evento?.thankYouUrl || '').trim();
+    if (url) {
+      const destino = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+      window.location.href = destino;
+      return;
+    }
+    setLocation(`/ticket/${orderCode}`);
+  };
+
   const verificarPagamentoCartao = async (
     orderCode: string,
     payload: RegistrationResponse
@@ -354,7 +366,7 @@ export default function EventDetails() {
 
       if (['confirmed', 'paid', 'captured'].includes(normalizedStatus)) {
         showPaymentStatusToast(status, registration.message);
-        setLocation(`/ticket/${orderCode}`);
+        irParaPosPagamento(orderCode);
         return;
       }
 
@@ -1128,14 +1140,15 @@ export default function EventDetails() {
         });
         const pixCode = resultado.pagamento?.qrCodeString || '';
         const qrCode = resultado.pagamento?.qrCodeBase64 || '';
+        const tyQuery = evento?.thankYouUrl ? `&thankYouUrl=${encodeURIComponent(evento.thankYouUrl)}` : '';
         setLocation(
-          `/pix-confirmacao?orderCode=${resultado.orderCode}&pixCode=${encodeURIComponent(pixCode)}&qrCode=${encodeURIComponent(qrCode)}`
+          `/pix-confirmacao?orderCode=${resultado.orderCode}&pixCode=${encodeURIComponent(pixCode)}&qrCode=${encodeURIComponent(qrCode)}${tyQuery}`
         );
         return;
       }
 
       if (!requiresPayment) {
-        setLocation(`/ticket/${resultado.orderCode}`);
+        irParaPosPagamento(resultado.orderCode);
         return;
       }
       const formaPagamentoSelecionada = findPaymentOption(formaPagamento);
@@ -1152,11 +1165,12 @@ export default function EventDetails() {
         console.log('ENTRANDO NO IF DO PIX');
         const pixCode = resultado.pagamento?.qrCodeString || '';
         const qrCode = resultado.pagamento?.qrCodeBase64 || '';
+        const tyQuery = evento?.thankYouUrl ? `&thankYouUrl=${encodeURIComponent(evento.thankYouUrl)}` : '';
         console.log('Redirecionando para:', `/pix-confirmacao?orderCode=${resultado.orderCode}`);
         setLocation(
           `/pix-confirmacao?orderCode=${resultado.orderCode}&pixCode=${encodeURIComponent(
             pixCode
-          )}&qrCode=${encodeURIComponent(qrCode)}`
+          )}&qrCode=${encodeURIComponent(qrCode)}${tyQuery}`
         );
         toast.info('Aguardando confirmação do PIX...');
         setTimeout(async () => {
@@ -1164,7 +1178,7 @@ export default function EventDetails() {
             const registration = await consultarInscricao(resultado.orderCode);
             const status = registration.paymentStatus;
             if (status === 'confirmed' || status === 'paid') {
-              setLocation(`/ticket/${resultado.orderCode}`);
+              irParaPosPagamento(resultado.orderCode);
             } else {
               setLocation(`/inscricao/${resultado.orderCode}`);
             }

@@ -28,6 +28,13 @@ export async function montarEtiqueta(
     batchName = att.batch?.name || '';
   }
 
+  // Mapa de campos do formulário (comprador + inscrito) para campos arbitrários da etiqueta.
+  // Inscrito tem precedência sobre comprador em caso de mesma chave.
+  const fields: Record<string, string> = {};
+  const toStr = (v: unknown) => (v == null ? '' : String(v));
+  if (reg?.buyerData) Object.entries(reg.buyerData).forEach(([k, v]) => { fields[k] = toStr(v); });
+  if (att?.attendeeData) Object.entries(att.attendeeData).forEach(([k, v]) => { fields[k] = toStr(v); });
+
   const item: LabelRenderItem = {
     key: `${orderCode || 'label'}-${attendeeId || '0'}`,
     attendeeName: name,
@@ -38,6 +45,7 @@ export async function montarEtiqueta(
     attendeeId: attendeeId || '',
     eventId,
     eventImage: tplResp.event.imageUrl || null,
+    fields,
   };
   return { template: tplResp.template, items: [item] };
 }

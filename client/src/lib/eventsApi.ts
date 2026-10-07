@@ -75,6 +75,9 @@ export interface Event {
   waitlistOfferTtlHours?: number;
   allowBelowMinimumDeposit?: boolean;
   belowMinDepositTtlHours?: number;
+  // Evento online (venda/pré-venda) + link de obrigado (redirecionamento pós-pagamento).
+  isOnline?: boolean;
+  thankYouUrl?: string | null;
   // Desconto automático por quantidade (sem cupom): preço-teto por ingresso quando
   // o pedido atinge a quantidade mínima da faixa. Configurado no admin do portal.
   quantityDiscount?: {
@@ -636,12 +639,14 @@ export const verificarStatusUpgrade = async (orderCode: string): Promise<Upgrade
 export interface LookupAttendee {
   id: string;
   name: string;
+  attendeeData?: Record<string, unknown>;
   batch: { name: string; sector: string | null; price: number } | null;
 }
 export interface LookupRegistration {
   orderCode: string;
   paymentStatus: string;
   buyerName: string | null;
+  buyerData?: Record<string, unknown>;
   event: { id: string; title: string; startDate?: string; location?: string; imageUrl?: string } | null;
   attendees: LookupAttendee[];
 }
@@ -657,6 +662,7 @@ export interface LabelElement {
   align: 'left' | 'center' | 'right';
   uppercase?: boolean;
   nameFormat?: 'full' | 'first_last';
+  opacity?: number;
 }
 export interface LabelTemplateResponse {
   event: { id: string; title: string; imageUrl?: string | null };
@@ -666,6 +672,8 @@ export interface LabelTemplateResponse {
     widthMm: number | string;
     heightMm: number | string;
     elements: LabelElement[];
+    logoImage?: string | null;
+    logoBackground?: { enabled: boolean; opacity: number } | null;
   };
 }
 
