@@ -6,6 +6,7 @@ import { LabelSheet } from '@/components/LabelSheet';
 import { montarEtiqueta } from '@/lib/labelData';
 import {
   buscarConfigKit,
+  buscarModeloEtiqueta,
   registrarRetiradaKit,
   type KitConfigResponse,
   type KitDeliveryResponse,
@@ -35,6 +36,8 @@ export default function KitRetirada() {
   const [resultado, setResultado] = useState<KitDeliveryResponse | null>(null);
   const [labelPrint, setLabelPrint] = useState<{ template: LabelTemplateResponse['template']; items: any[] } | null>(null);
   const [testePrint, setTestePrint] = useState<{ template: LabelTemplateResponse['template']; items: any[] } | null>(null);
+  // Evento realmente imprime etiqueta (tem modelo e flag não desligado).
+  const [vaiImprimir, setVaiImprimir] = useState(false);
 
   // Chave por evento para lembrar (neste dispositivo/navegador) que a impressora já foi
   // configurada — evita repetir o passo a cada recarga.
@@ -52,14 +55,23 @@ export default function KitRetirada() {
     let cancel = false;
     (async () => {
       try {
-        const cfg = await buscarConfigKit(eventId);
+        // Busca a config do kit e o modelo de etiqueta em paralelo. O modelo é o
+        // sinal confiável de que haverá impressão (o flag imprimeEtiqueta pode não
+        // vir no kit-config, dependendo do backend).
+        const [cfg, modelo] = await Promise.all([
+          buscarConfigKit(eventId),
+          buscarModeloEtiqueta(eventId).catch(() => null),
+        ]);
         if (cancel) return;
         setConfig(cfg);
-        // Se o evento imprime etiqueta e a impressora ainda não foi configurada
-        // neste dispositivo, pede a configuração antes de liberar a leitura.
+        // Imprime etiqueta se: existe modelo de etiqueta E o flag não está
+        // explicitamente desligado. Assim funciona mesmo que imprimeEtiqueta venha
+        // undefined/ausente do kit-config.
+        const imprime = Boolean(modelo?.template) && cfg.imprimeEtiqueta !== false;
+        setVaiImprimir(imprime);
         let jaConfig = false;
         try { jaConfig = localStorage.getItem(printerStorageKey) === '1'; } catch { /* storage indisponível */ }
-        setEstado(cfg.imprimeEtiqueta && !jaConfig ? 'configurarImpressora' : 'idle');
+        setEstado(imprime && !jaConfig ? 'configurarImpressora' : 'idle');
       } catch (err: any) {
         if (cancel) return;
         setErro(err?.response?.data?.message || 'Não foi possível carregar a configuração de kits.');
@@ -260,7 +272,7 @@ export default function KitRetirada() {
                   <ScanLine size={23} aria-hidden="true" /><span>Retirar meu kit</span><ArrowRight size={21} aria-hidden="true" />
                 </button>
                 <p className="kit-camera-note"><Camera size={15} aria-hidden="true" /> A câmera será aberta para ler o ingresso.</p>
-                {config.imprimeEtiqueta && (
+                {vaiImprimir && (
                   <button type="button" onClick={reconfigurarImpressora} className="kit-config-link">
                     <Printer size={14} aria-hidden="true" /> Reconfigurar impressora
                   </button>
