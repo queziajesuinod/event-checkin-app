@@ -44,9 +44,47 @@ export async function imprimirEtiquetasPdf(
   }
 
   doc.autoPrint();
-  const url = doc.output('bloburl');
-  const win = window.open(url, '_blank');
-  if (!win) doc.save('etiquetas.pdf'); // popup bloqueado → baixa o PDF
+  const url = String(doc.output('bloburl'));
+
+  // Imprime o PDF via iframe oculto e dispara print() nele: a janela de impressão
+  // abre automaticamente (não só abre o PDF), sem depender de pop-up nem de aba nova.
+  // Se algo falhar, cai para abrir em nova aba (visualizador respeita o autoPrint) ou baixar.
+  await new Promise<void>((resolve) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    iframe.src = url;
+
+    let finalizado = false;
+    const limpar = () => { setTimeout(() => { try { iframe.remove(); } catch { /* já removido */ } }, 60000); };
+
+    iframe.onload = () => {
+      if (finalizado) return;
+      finalizado = true;
+      try {
+        const w2 = iframe.contentWindow;
+        if (!w2) throw new Error('sem contentWindow');
+        w2.focus();
+        w2.print();
+      } catch {
+        const win = window.open(url, '_blank');
+        if (!win) doc.save('etiquetas.pdf'); // pop-up bloqueado → baixa o PDF
+      }
+      limpar();
+      resolve();
+    };
+
+    // Segurança: se o iframe não carregar, usa o fallback de nova aba/download.
+    setTimeout(() => {
+      if (finalizado) return;
+      finalizado = true;
+      const win = window.open(url, '_blank');
+      if (!win) doc.save('etiquetas.pdf');
+      limpar();
+      resolve();
+    }, 3000);
+
+    document.body.appendChild(iframe);
+  });
 }
 
 export default imprimirEtiquetasPdf;
