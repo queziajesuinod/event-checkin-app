@@ -85,6 +85,11 @@
 .kit-message-warning .kit-message-icon { color: #87591a; background: #fff5dc; }
 .kit-message .kit-message-hint { margin-top: 24px; font-size: 13px; }
 .kit-message > .kit-button { margin-top: 28px; }
+.kit-config-actions { display: flex; flex-direction: column; gap: 12px; max-width: 420px; margin: 28px auto 0; }
+.kit-config-actions .kit-button { width: 100%; }
+.kit-config-link { display: inline-flex; align-items: center; gap: 7px; margin-top: 18px; padding: 0; background: none; border: none; color: var(--kit-blue); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.kit-config-link svg { flex-shrink: 0; }
+.kit-config-link:hover { color: #1a389a; }
 .kit-result { width: 100%; }
 .kit-next { display: flex; margin: 28px auto 0; min-width: 240px; }
 .kit-result-sector { display: inline-block; margin-top: 12px; padding: 6px 12px; border: 1px solid var(--kit-line); border-radius: 5px; font-size: 13px; }

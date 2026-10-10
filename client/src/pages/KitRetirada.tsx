@@ -12,7 +12,7 @@ import {
   type LabelTemplateResponse,
 } from '@/lib/eventsApi';
 
-type Estado = 'carregando' | 'idle' | 'scanning' | 'processando' | 'resultado' | 'erroConfig';
+type Estado = 'carregando' | 'configurarImpressora' | 'idle' | 'scanning' | 'processando' | 'resultado' | 'erroConfig';
 
 // Texto legível (preto/branco) sobre uma cor de fundo
 function textoSobre(bg: string): '#0b1220' | '#ffffff' {
@@ -34,6 +34,12 @@ export default function KitRetirada() {
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<KitDeliveryResponse | null>(null);
   const [labelPrint, setLabelPrint] = useState<{ template: LabelTemplateResponse['template']; items: any[] } | null>(null);
+  const [testePrint, setTestePrint] = useState<{ template: LabelTemplateResponse['template']; items: any[] } | null>(null);
+
+  // Chave por evento para lembrar (neste dispositivo/navegador) que a impressora já foi
+  // configurada — evita repetir o passo a cada recarga.
+  const printerStorageKey = `kit:impressora-ok:${eventId}`;
+  const testeNonceRef = useRef(0);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -49,7 +55,11 @@ export default function KitRetirada() {
         const cfg = await buscarConfigKit(eventId);
         if (cancel) return;
         setConfig(cfg);
-        setEstado('idle');
+        // Se o evento imprime etiqueta e a impressora ainda não foi configurada
+        // neste dispositivo, pede a configuração antes de liberar a leitura.
+        let jaConfig = false;
+        try { jaConfig = localStorage.getItem(printerStorageKey) === '1'; } catch { /* storage indisponível */ }
+        setEstado(cfg.imprimeEtiqueta && !jaConfig ? 'configurarImpressora' : 'idle');
       } catch (err: any) {
         if (cancel) return;
         setErro(err?.response?.data?.message || 'Não foi possível carregar a configuração de kits.');
@@ -73,6 +83,31 @@ export default function KitRetirada() {
     busyRef.current = false;
     setEstado('idle');
   }, [stopScan]);
+
+  // Marca a impressora como configurada neste dispositivo e libera a leitura.
+  const marcarImpressoraPronta = useCallback(() => {
+    try { localStorage.setItem(printerStorageKey, '1'); } catch { /* storage indisponível */ }
+    setTestePrint(null);
+    setEstado('idle');
+  }, [printerStorageKey]);
+
+  // Imprime uma etiqueta de teste para o operador escolher a impressora e o
+  // tamanho corretos na janela de impressão (o navegador guarda a escolha).
+  const imprimirTeste = useCallback(async () => {
+    const et = await montarEtiqueta(eventId, undefined, undefined, 'ETIQUETA DE TESTE');
+    if (!et) { marcarImpressoraPronta(); return; } // sem modelo: nada a configurar
+    testeNonceRef.current += 1;
+    const nonce = testeNonceRef.current;
+    // Chave variável a cada clique para permitir reimprimir o teste quantas vezes quiser.
+    setTestePrint({ template: et.template, items: et.items.map((it) => ({ ...it, key: `teste-${nonce}` })) });
+  }, [eventId, marcarImpressoraPronta]);
+
+  // Permite refazer a configuração da impressora (ex.: trocou de impressora).
+  const reconfigurarImpressora = useCallback(() => {
+    try { localStorage.removeItem(printerStorageKey); } catch { /* storage indisponível */ }
+    setTestePrint(null);
+    setEstado('configurarImpressora');
+  }, [printerStorageKey]);
 
   const processarQr = useCallback(async (raw: string) => {
     if (busyRef.current) return;
@@ -180,6 +215,7 @@ export default function KitRetirada() {
   return (
     <div className="kit-page">
       {labelPrint && <LabelSheet template={labelPrint.template} items={labelPrint.items} screenHidden autoPrint />}
+      {testePrint && <LabelSheet template={testePrint.template} items={testePrint.items} screenHidden autoPrint />}
       <div className="kit-shell no-print">
         <header className="kit-header">
           <div className="kit-brand">
@@ -190,6 +226,30 @@ export default function KitRetirada() {
         </header>
 
         <main className="kit-main">
+          {estado === 'configurarImpressora' && (
+            <section className="kit-message kit-config-printer">
+              <span className="kit-message-icon"><Printer size={30} aria-hidden="true" /></span>
+              <span className="kit-eyebrow">Antes de começar</span>
+              <h1>Configure a impressora.</h1>
+              <p>
+                Imprima uma etiqueta de teste e, na janela de impressão, selecione a impressora de
+                etiquetas e confira o tamanho. O navegador guarda essa escolha para as próximas leituras.
+              </p>
+              <div className="kit-config-actions">
+                <button type="button" onClick={imprimirTeste} className="kit-button kit-button-secondary">
+                  <Printer size={18} aria-hidden="true" /> Imprimir etiqueta de teste
+                </button>
+                <button type="button" onClick={marcarImpressoraPronta} className="kit-button kit-button-primary">
+                  Impressora pronta, começar <ArrowRight size={20} aria-hidden="true" />
+                </button>
+              </div>
+              <p className="kit-message-hint">
+                A etiqueta de teste saiu no tamanho certo? Então pode iniciar as retiradas. Se precisar,
+                imprima o teste novamente até acertar a impressora.
+              </p>
+            </section>
+          )}
+
           {estado === 'idle' && config && (
             <div className="kit-entry">
               <section className="kit-intro" aria-labelledby="kit-title">
@@ -200,6 +260,11 @@ export default function KitRetirada() {
                   <ScanLine size={23} aria-hidden="true" /><span>Retirar meu kit</span><ArrowRight size={21} aria-hidden="true" />
                 </button>
                 <p className="kit-camera-note"><Camera size={15} aria-hidden="true" /> A câmera será aberta para ler o ingresso.</p>
+                {config.imprimeEtiqueta && (
+                  <button type="button" onClick={reconfigurarImpressora} className="kit-config-link">
+                    <Printer size={14} aria-hidden="true" /> Reconfigurar impressora
+                  </button>
+                )}
               </section>
               <aside className="kit-ticket" aria-labelledby="kit-sectors-title">
                 <div className="kit-ticket-heading">
