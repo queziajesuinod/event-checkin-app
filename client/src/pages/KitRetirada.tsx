@@ -239,14 +239,15 @@ export default function KitRetirada() {
 
   return (
     <div className="kit-page">
+      {/* Folha da etiqueta real renderizada (oculta) para o PDF poder rasterizá-la.
+          A impressão é disparada pelo botão "Imprimir etiqueta" (precisa de um clique:
+          o navegador bloqueia abrir a janela de impressão de PDF sem gesto do usuário). */}
       {labelPrint && (
         <LabelSheet
           template={labelPrint.template}
           items={labelPrint.items}
           screenHidden
-          autoPrint
           printId="kit-print-real"
-          onPrint={(id) => imprimirViaPdf(labelPrint.template, id)}
         />
       )}
       {testePrint && (
@@ -401,7 +402,17 @@ export default function KitRetirada() {
                     <p>Apresente esta confirmação à equipe e retire seu kit.</p>
                     {resultado!.imprimeEtiqueta && (
                       <div className="kit-print-status">
-                        <div><Printer size={20} aria-hidden="true" /><span>{labelPrint ? 'Imprimindo etiqueta…' : 'Preparando etiqueta…'}</span></div>
+                        {labelPrint ? (
+                          <button
+                            type="button"
+                            onClick={() => imprimirViaPdf(labelPrint.template, 'kit-print-real')}
+                            className="kit-button kit-button-primary"
+                          >
+                            <Printer size={20} aria-hidden="true" /> Imprimir etiqueta
+                          </button>
+                        ) : (
+                          <div><Printer size={20} aria-hidden="true" /><span>Preparando etiqueta…</span></div>
+                        )}
                       </div>
                     )}
                   </div>
