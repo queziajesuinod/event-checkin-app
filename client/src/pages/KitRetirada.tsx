@@ -114,6 +114,19 @@ export default function KitRetirada() {
     setTestePrint({ template: et.template, items: et.items.map((it) => ({ ...it, key: `teste-${nonce}` })) });
   }, [eventId, marcarImpressoraPronta]);
 
+  // Imprime a etiqueta via PDF no tamanho EXATO do modelo (mesmo método confiável
+  // da tela /etiquetas). Evita o window.print() cair para A4/modelo errado quando a
+  // impressora de etiqueta não está perfeitamente selecionada.
+  const imprimirViaPdf = useCallback(async (tpl: LabelTemplateResponse['template'], printId: string) => {
+    try {
+      const { imprimirEtiquetasPdf } = await import('@/lib/labelPdf');
+      await imprimirEtiquetasPdf(Number(tpl.widthMm), Number(tpl.heightMm), printId);
+    } catch (e) {
+      console.error('Falha ao gerar PDF da etiqueta, usando impressão padrão:', e);
+      window.print();
+    }
+  }, []);
+
   // Permite refazer a configuração da impressora (ex.: trocou de impressora).
   const reconfigurarImpressora = useCallback(() => {
     try { localStorage.removeItem(printerStorageKey); } catch { /* storage indisponível */ }
@@ -226,8 +239,26 @@ export default function KitRetirada() {
 
   return (
     <div className="kit-page">
-      {labelPrint && <LabelSheet template={labelPrint.template} items={labelPrint.items} screenHidden autoPrint />}
-      {testePrint && <LabelSheet template={testePrint.template} items={testePrint.items} screenHidden autoPrint />}
+      {labelPrint && (
+        <LabelSheet
+          template={labelPrint.template}
+          items={labelPrint.items}
+          screenHidden
+          autoPrint
+          printId="kit-print-real"
+          onPrint={(id) => imprimirViaPdf(labelPrint.template, id)}
+        />
+      )}
+      {testePrint && (
+        <LabelSheet
+          template={testePrint.template}
+          items={testePrint.items}
+          screenHidden
+          autoPrint
+          printId="kit-print-teste"
+          onPrint={(id) => imprimirViaPdf(testePrint.template, id)}
+        />
+      )}
       <div className="kit-shell no-print">
         <header className="kit-header">
           <div className="kit-brand">

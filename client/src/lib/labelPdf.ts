@@ -11,9 +11,13 @@ import JsPDF from 'jspdf';
  * Rasteriza as próprias etiquetas já renderizadas (.etiqueta dentro de
  * #etiquetas-print), mantendo o layout idêntico (rotação, marca d'água, QR, logo).
  */
-export async function imprimirEtiquetasPdf(widthMm: number, heightMm: number): Promise<void> {
+export async function imprimirEtiquetasPdf(
+  widthMm: number,
+  heightMm: number,
+  printId = 'etiquetas-print',
+): Promise<void> {
   const nodes = Array.from(
-    document.querySelectorAll<HTMLElement>('#etiquetas-print .etiqueta'),
+    document.querySelectorAll<HTMLElement>(`#${printId} .etiqueta`),
   );
   if (!nodes.length) {
     window.print();

@@ -46,8 +46,14 @@ interface Props {
   items: LabelRenderItem[];
   /** Esconde a folha na tela (só imprime) — usado no check-in. */
   screenHidden?: boolean;
-  /** Dispara window.print() automaticamente quando os QRs estão prontos. */
+  /** Dispara a impressão automaticamente quando os QRs estão prontos. */
   autoPrint?: boolean;
+  /** id do container imprimível. Único por instância para evitar colisão quando há
+   *  mais de um LabelSheet na mesma tela (ex.: etiqueta real + etiqueta de teste). */
+  printId?: string;
+  /** Se fornecido, é chamado no lugar de window.print() quando autoPrint dispara.
+   *  Recebe o id do container — permite imprimir via PDF no tamanho exato. */
+  onPrint?: (printId: string) => void;
 }
 
 const num = (v: number | string) => {
@@ -95,7 +101,7 @@ function resolveField(field: string | null, item: LabelRenderItem): string {
   }
 }
 
-export function LabelSheet({ template, items, screenHidden = false, autoPrint = false }: Props) {
+export function LabelSheet({ template, items, screenHidden = false, autoPrint = false, printId = 'etiquetas-print', onPrint }: Props) {
   // Fallback para o tamanho padrão da etiqueta: dimensão 0/ausente geraria
   // "@page { size: 0mm 0mm }" (inválido) e o navegador cairia no padrão A4.
   const widthMm = num(template.widthMm) || 90;
@@ -131,9 +137,9 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
     const token = items.map((i) => i.key).join('|');
     if (printedRef.current === token) return;
     printedRef.current = token;
-    const t = setTimeout(() => window.print(), 350);
+    const t = setTimeout(() => { if (onPrint) onPrint(printId); else window.print(); }, 350);
     return () => clearTimeout(t);
-  }, [autoPrint, ready, items]);
+  }, [autoPrint, ready, items, onPrint, printId]);
 
   const renderElemento = (el: LabelElement, item: LabelRenderItem) => {
     const style: React.CSSProperties = {
@@ -194,20 +200,20 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
     <>
       <style>{`
         @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
-        ${screenHidden ? '@media screen { #etiquetas-print { position: fixed !important; left: -10000px !important; top: 0 !important; opacity: 0 !important; pointer-events: none !important; z-index: -1 !important; } }' : ''}
+        ${screenHidden ? `@media screen { #${printId} { position: fixed !important; left: -10000px !important; top: 0 !important; pointer-events: none !important; z-index: -1 !important; } }` : ''}
         @media print {
           body * { visibility: hidden !important; }
-          #etiquetas-print, #etiquetas-print * { visibility: visible !important; }
-          #etiquetas-print { position: absolute !important; left: 0; top: 0; padding: 0 !important; margin: 0 !important; background: none !important; border: none !important; box-shadow: none !important; display: block !important; }
+          #${printId}, #${printId} * { visibility: visible !important; }
+          #${printId} { position: absolute !important; left: 0; top: 0; padding: 0 !important; margin: 0 !important; background: none !important; border: none !important; box-shadow: none !important; display: block !important; }
           /* cada inscrito = uma etiqueta em página separada */
-          .etiqueta { page-break-after: always; break-after: page; border: none !important; box-shadow: none !important; border-radius: 0 !important; margin: 0 !important; }
-          .etiqueta:last-child { page-break-after: auto; break-after: auto; }
+          #${printId} .etiqueta { page-break-after: always; break-after: page; border: none !important; box-shadow: none !important; border-radius: 0 !important; margin: 0 !important; }
+          #${printId} .etiqueta:last-child { page-break-after: auto; break-after: auto; }
           .no-print { display: none !important; }
         }
       `}</style>
 
       <div
-        id="etiquetas-print"
+        id={printId}
         className={screenHidden ? '' : 'mx-auto mb-10 flex max-w-4xl flex-wrap justify-center gap-4 rounded-2xl border bg-muted/40 p-4 sm:p-6'}
       >
         {items.map((item) => (
