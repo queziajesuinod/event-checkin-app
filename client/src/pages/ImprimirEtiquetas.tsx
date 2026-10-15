@@ -190,20 +190,50 @@ export default function ImprimirEtiquetas() {
   useEffect(() => () => stopScan(), [stopScan]);
 
   const [gerandoPdf, setGerandoPdf] = useState(false);
-  // Impressão no tamanho exato do modelo (PDF). Fallback: window.print() se falhar.
-  const imprimir = async () => {
+  // key do inscrito cuja etiqueta individual está sendo gerada (feedback no botão).
+  const [gerandoKey, setGerandoKey] = useState<string | null>(null);
+
+  // Imprime UMA etiqueta (um inscrito), no tamanho exato do modelo. Cada impressão
+  // vira um trabalho próprio — ideal para reimprimir quem saiu errado.
+  const imprimirUm = async (key: string) => {
+    if (!tpl?.template) { window.print(); return; }
+    try {
+      setGerandoKey(key);
+      const { imprimirEtiquetasPdf } = await import('@/lib/labelPdf');
+      await imprimirEtiquetasPdf(Number(tpl.template.widthMm), Number(tpl.template.heightMm), 'etiquetas-print', { keys: [key] });
+    } catch (err) {
+      console.error('Falha ao gerar PDF da etiqueta, usando impressão padrão:', err);
+      window.print();
+    } finally {
+      setGerandoKey(null);
+    }
+  };
+
+  // Imprime TODAS as etiquetas da compra, uma por vez (um trabalho de impressão
+  // por etiqueta). Assim a impressora corta entre elas e não sai tudo numa fita só.
+  const imprimirTodas = async () => {
     if (!tpl?.template) { window.print(); return; }
     try {
       setGerandoPdf(true);
       const { imprimirEtiquetasPdf } = await import('@/lib/labelPdf');
-      await imprimirEtiquetasPdf(Number(tpl.template.widthMm), Number(tpl.template.heightMm));
+      const w = Number(tpl.template.widthMm);
+      const h = Number(tpl.template.heightMm);
+      for (const it of itens) {
+        // eslint-disable-next-line no-await-in-loop
+        await imprimirEtiquetasPdf(w, h, 'etiquetas-print', { keys: [it.key] });
+        // Pequena pausa para cada trabalho de impressão não se sobrepor ao próximo.
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 600));
+      }
     } catch (err) {
-      console.error('Falha ao gerar PDF da etiqueta, usando impressão padrão:', err);
+      console.error('Falha ao gerar PDF das etiquetas, usando impressão padrão:', err);
       window.print();
     } finally {
       setGerandoPdf(false);
     }
   };
+
+  const imprimindo = gerandoPdf || gerandoKey !== null;
 
   return (
     <div className="portal-page min-h-dvh bg-background">
@@ -308,19 +338,50 @@ export default function ImprimirEtiquetas() {
             </Card>
 
             {itens.length > 0 && (
-              <div className="mt-6 flex flex-col items-center gap-4 rounded-xl border bg-card p-5 text-center shadow-sm">
-                <div>
-                  <p className="text-lg font-semibold">{itens.length} etiqueta(s) encontrada(s)</p>
-                  <p className="text-sm text-muted-foreground">Tamanho {widthMm}×{heightMm} mm — confira a pré-visualização abaixo.</p>
+              <div className="mt-6 space-y-4">
+                <div className="flex flex-col items-center gap-3 rounded-xl border bg-card p-5 text-center shadow-sm sm:flex-row sm:justify-between sm:text-left">
+                  <div>
+                    <p className="text-lg font-semibold">{itens.length} etiqueta(s) encontrada(s)</p>
+                    <p className="text-sm text-muted-foreground">
+                      Tamanho {widthMm}×{heightMm} mm. Imprima todas ou reimprima só quem precisar.
+                    </p>
+                  </div>
+                  <Button onClick={imprimirTodas} disabled={imprimindo} size="lg" className="h-12 w-full gap-2 text-base sm:w-auto sm:px-6">
+                    {gerandoPdf ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <Printer className="h-5 w-5" aria-hidden="true" />}
+                    {gerandoPdf ? 'Imprimindo…' : `Imprimir todas (${itens.length})`}
+                  </Button>
                 </div>
-                <Button onClick={imprimir} disabled={gerandoPdf} size="lg" className="h-12 w-full gap-2 text-base sm:w-auto sm:px-8">
-                  <Printer className="h-5 w-5" aria-hidden="true" />
-                  {gerandoPdf ? 'Gerando...' : `Imprimir ${itens.length} etiqueta(s)`}
-                </Button>
+
+                <ul className="divide-y overflow-hidden rounded-xl border bg-card shadow-sm">
+                  {itens.map((it) => (
+                    <li key={it.key} className="flex items-center gap-3 p-3 sm:px-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{it.attendeeName || 'Sem nome'}</p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          {it.sector && <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5">{it.sector}</span>}
+                          {it.batchName && <span>{it.batchName}</span>}
+                          <span className="font-mono">{it.orderCode}</span>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => imprimirUm(it.key)}
+                        disabled={imprimindo}
+                        className="h-9 shrink-0 gap-1.5"
+                      >
+                        {gerandoKey === it.key ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Printer className="h-4 w-4" aria-hidden="true" />}
+                        Imprimir
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="no-print text-xs text-muted-foreground underline"
+                  className="no-print mx-auto block text-xs text-muted-foreground underline"
                 >
                   Usar impressão do navegador (se o PDF não funcionar)
                 </button>

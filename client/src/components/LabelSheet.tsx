@@ -219,6 +219,7 @@ export function LabelSheet({ template, items, screenHidden = false, autoPrint = 
         {items.map((item) => (
           <div
             key={item.key}
+            data-label-key={item.key}
             className="etiqueta relative overflow-hidden rounded-md bg-white ring-1 ring-black/10 shadow-sm"
             style={{ width: `${widthMm}mm`, height: `${heightMm}mm`, boxSizing: 'border-box' }}
           >
