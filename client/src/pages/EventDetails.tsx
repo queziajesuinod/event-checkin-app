@@ -423,7 +423,10 @@ export default function EventDetails() {
       toast.error(`Máximo de ${limite} inscrição(ões) por comprador`);
       return;
     }
-    setInscritos(prev => [...prev, { dados: {}, salvo: false, id: Date.now().toString(), batchId: null }]);
+    // Na lista de espera o lote fica travado no lote esgotado escolhido, então o
+    // novo inscrito herda esse mesmo batchId (o seletor fica somente-leitura).
+    const batchIdInicial = modoListaEspera ? (inscritos[0]?.batchId ?? null) : null;
+    setInscritos(prev => [...prev, { dados: {}, salvo: false, id: Date.now().toString(), batchId: batchIdInicial }]);
   };
 
   const removerInscrito = (id: string) => {
@@ -2095,32 +2098,50 @@ export default function EventDetails() {
                               <Label className="text-sm font-medium text-slate-700">
                                 Lote <span className="text-red-500">*</span>
                               </Label>
-                              <Select
-                                value={inscrito.batchId || ''}
-                                onValueChange={(v) =>
-                                  setInscritos((prev) =>
-                                    prev.map((i) => (i.id === inscrito.id ? { ...i, batchId: v } : i))
-                                  )
-                                }
-                                disabled={!lotesAtivosNoRange.length}
-                              >
-                                <SelectTrigger className="mt-1.5 w-full bg-white border-slate-400 focus:border-primary">
-                                  <SelectValue placeholder="Selecione o lote" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {lotesAtivosNoRange.map((lote) => {
-                                    const esgotado = lote.vagasDisponiveis != null && lote.vagasDisponiveis <= 0;
-                                    return (
-                                      <SelectItem key={lote.id} value={lote.id} disabled={esgotado}>
-                                        {lote.name} — R$ {Number(lote.price).toFixed(2)}
-                                        {esgotado && ' (Esgotado)'}
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
-                              {!lotesAtivosNoRange.length && (
-                                <p className="text-xs text-red-600 mt-1">Nenhum lote ativo.</p>
+                              {modoListaEspera ? (
+                                // Lista de espera: o lote está esgotado de propósito e fica
+                                // TRAVADO no lote escolhido. Ele não aparece em
+                                // lotesAtivosNoRange (sem vaga), então mostrar o seletor faria
+                                // o usuário trocar por um lote com vaga — e o backend recusaria
+                                // a entrada na fila ("ainda há vagas, faça a inscrição normalmente").
+                                <div className="mt-1.5 flex items-center justify-between rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+                                  <span className="text-sm text-slate-700">
+                                    {lotesById.get(inscrito.batchId || '')?.name || 'Lote selecionado'}
+                                  </span>
+                                  <span className="text-xs text-amber-600 font-medium shrink-0 ml-2">
+                                    Esgotado · lista de espera
+                                  </span>
+                                </div>
+                              ) : (
+                                <>
+                                  <Select
+                                    value={inscrito.batchId || ''}
+                                    onValueChange={(v) =>
+                                      setInscritos((prev) =>
+                                        prev.map((i) => (i.id === inscrito.id ? { ...i, batchId: v } : i))
+                                      )
+                                    }
+                                    disabled={!lotesAtivosNoRange.length}
+                                  >
+                                    <SelectTrigger className="mt-1.5 w-full bg-white border-slate-400 focus:border-primary">
+                                      <SelectValue placeholder="Selecione o lote" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {lotesAtivosNoRange.map((lote) => {
+                                        const esgotado = lote.vagasDisponiveis != null && lote.vagasDisponiveis <= 0;
+                                        return (
+                                          <SelectItem key={lote.id} value={lote.id} disabled={esgotado}>
+                                            {lote.name} — R$ {Number(lote.price).toFixed(2)}
+                                            {esgotado && ' (Esgotado)'}
+                                          </SelectItem>
+                                        );
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                  {!lotesAtivosNoRange.length && (
+                                    <p className="text-xs text-red-600 mt-1">Nenhum lote ativo.</p>
+                                  )}
+                                </>
                               )}
                             </div>
                             <div className="space-y-4">
