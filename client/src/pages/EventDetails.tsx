@@ -232,6 +232,11 @@ function DebouncedTextarea({
 // "Responsável pelo ingresso" (destinatário do ticket / membro).
 const relabelResponsavel = (label: string) => label.replace(/comprador/gi, 'Responsável pelo ingresso');
 
+// A URL do evento pode vir com o UUID real ou com o apelido (slug). Como os
+// sub-recursos (lotes, campos, pagamento) só aceitam o UUID, quando a rota traz
+// um slug nós resolvemos para o ID real e trocamos a URL (redirect).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function EventDetails() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute('/eventos/:id');
@@ -398,6 +403,30 @@ export default function EventDetails() {
       setLoadingDetails(false);
       setLocation('/eventos');
       return;
+    }
+    // URL com apelido (slug): resolve para o UUID real e troca a URL antes de
+    // carregar os dados — os sub-recursos do evento só aceitam o UUID.
+    if (!UUID_RE.test(eventId)) {
+      let cancelado = false;
+      buscarEventoPublico(eventId)
+        .then((data) => {
+          if (cancelado) return;
+          if (data?.id) {
+            setLocation(`/eventos/${data.id}`, { replace: true });
+          } else {
+            setLocation('/eventos');
+          }
+        })
+        .catch((error) => {
+          if (cancelado) return;
+          console.error('Erro ao resolver apelido do evento:', error);
+          setLoadingEvent(false);
+          setLoadingDetails(false);
+          setLocation('/eventos');
+        });
+      return () => {
+        cancelado = true;
+      };
     }
     carregarDados();
   }, [eventId, setLocation]);

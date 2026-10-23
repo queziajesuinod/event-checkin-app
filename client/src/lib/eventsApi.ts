@@ -46,6 +46,7 @@ export function clearCache(): void {
 
 export interface Event {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   startDate: string;
