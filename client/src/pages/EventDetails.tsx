@@ -447,7 +447,7 @@ export default function EventDetails() {
   }, [evento?.imageUrl]);
 
   const adicionarInscrito = () => {
-    const limite = evento?.maxPerBuyer || 10;
+    const limite = evento?.maxPerBuyer || Infinity; // vazio = sem limite (igual ao back-end)
     if (inscritos.length >= limite) {
       toast.error(`Máximo de ${limite} inscrição(ões) por comprador`);
       return;
@@ -1597,7 +1597,7 @@ export default function EventDetails() {
         dateLabel = `${fmtDataCompleta(inicio)} a ${fmtDataCompleta(fim)}`;
       }
     }
-    const maxPerBuyer = evento.maxPerBuyer || 10;
+    const maxPerBuyer = evento.maxPerBuyer || Infinity; // vazio = sem limite
     const totalQty = Object.values(quantities).reduce((s, n) => s + n, 0);
     const totalAmount = lotes.reduce(
       (sum, lote) => sum + (quantities[lote.id] || 0) * Number(lote.price),
@@ -2083,7 +2083,7 @@ export default function EventDetails() {
                       variant="outline"
                       size="sm"
                       onClick={adicionarInscrito}
-                      disabled={(!hasLotAvailable && !modoListaEspera) || inscritos.length >= (evento?.maxPerBuyer || 10)}
+                      disabled={(!hasLotAvailable && !modoListaEspera) || inscritos.length >= (evento?.maxPerBuyer || Infinity)}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />
                       Adicionar
