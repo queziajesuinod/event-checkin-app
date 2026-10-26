@@ -265,6 +265,8 @@ export default function EventDetails() {
   const [cupomFormasPermitidas, setCupomFormasPermitidas] = useState<string[] | null>(null);
   const [validandoCupom, setValidandoCupom] = useState(false);
   const [dadosComprador, setDadosComprador] = useState<Record<string, any>>({});
+  // Adicionais/bônus escolhidos: { [addonId]: quantidade }.
+  const [addonQty, setAddonQty] = useState<Record<string, number>>({});
   const [inscritos, setInscritos] = useState<Array<{
     dados: Record<string, any>;
     salvo: boolean;
@@ -1144,6 +1146,9 @@ export default function EventDetails() {
           data: i.dados
         })),
         couponCode: cupomValido ? cupomCodigo.trim() : undefined,
+        adicionais: addonsSelecionados.length
+          ? addonsSelecionados.map((a) => ({ id: a.id, quantidade: a.quantidade }))
+          : undefined,
         paymentOptionId: requiresPayment ? formaPagamento : undefined,
         paymentData: requiresPayment
           ? {
@@ -1421,8 +1426,13 @@ export default function EventDetails() {
   const descontoOrigem = desconto <= 0
     ? null
     : (infoDescontoQtd.aplicado && infoDescontoQtd.desconto >= descontoCupomValor ? 'quantidade' : 'cupom');
-  const totalComTaxas = calcularValorTotal();
-  const taxasAplicados = Math.max(0, totalComTaxas - Math.max(0, subtotal - desconto));
+  // Adicionais/bônus: somam por cima do ingresso, fora de desconto e cupom.
+  const addonsSelecionados = (evento?.addons || [])
+    .map((a) => ({ ...a, quantidade: Math.max(0, Math.floor(addonQty[a.id] || 0)) }))
+    .filter((a) => a.quantidade > 0);
+  const addonsTotal = addonsSelecionados.reduce((s, a) => s + (Number(a.preco) || 0) * a.quantidade, 0);
+  const totalComTaxas = calcularValorTotal() + addonsTotal;
+  const taxasAplicados = Math.max(0, (totalComTaxas - addonsTotal) - Math.max(0, subtotal - desconto));
   const selectedPaymentOption = useMemo(
     () => findPaymentOption(formaPagamento),
     [formasPagamento, formaPagamento]
@@ -1434,7 +1444,7 @@ export default function EventDetails() {
       : undefined;
   const paymentUnavailableEffective = !hasLotAvailable || (requiresPayment && formasPagamento.length === 0);
   const isBalanceDue = evento?.registrationPaymentMode === 'BALANCE_DUE';
-  const totalSemJuros = Math.max(0, subtotal - desconto);
+  const totalSemJuros = Math.max(0, subtotal - desconto) + addonsTotal;
   const minimoSinal = evento?.depositAmount ?? 0;
   const valorOutroNumero = parseFloat(valorOutro.replace(',', '.')) || 0;
 
@@ -2624,6 +2634,58 @@ export default function EventDetails() {
                   </div>
                 )}
 
+                {/* Adicionais / bônus opcionais (quantidade livre, por cima do ingresso) */}
+                {(evento?.addons?.length ?? 0) > 0 && inscritos.some((i) => i.batchId) && (
+                  <div className="portal-document-card bg-white rounded-2xl p-5">
+                    <h3 className="font-bold text-slate-900 text-base mb-1 flex items-center gap-2">
+                      <span
+                        className="h-4 w-1 rounded-full bg-primary"
+                        style={palette ? { backgroundColor: palette.accent } : undefined}
+                      />
+                      Adicionais
+                    </h3>
+                    <p className="text-xs text-slate-500 mb-3">Itens opcionais. O valor é somado ao total.</p>
+                    <div className="space-y-2">
+                      {(evento?.addons ?? []).map((addon) => {
+                        const qty = Math.max(0, Math.floor(addonQty[addon.id] || 0));
+                        const max = addon.max && addon.max > 0 ? Math.floor(addon.max) : null;
+                        const setQty = (next: number) =>
+                          setAddonQty((prev) => ({ ...prev, [addon.id]: Math.max(0, max ? Math.min(max, next) : next) }));
+                        return (
+                          <div key={addon.id} className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-800 truncate">{addon.nome}</p>
+                              <p className="text-xs text-slate-500">
+                                R$ {(Number(addon.preco) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                {max ? ` · máx. ${max}` : ''}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setQty(qty - 1)}
+                                disabled={qty <= 0}
+                                className="h-8 w-8 rounded-lg border border-slate-200 text-slate-700 font-bold disabled:opacity-40 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                              >
+                                −
+                              </button>
+                              <span className="w-6 text-center text-sm font-semibold tabular-nums">{qty}</span>
+                              <button
+                                type="button"
+                                onClick={() => setQty(qty + 1)}
+                                disabled={max != null && qty >= max}
+                                className="h-8 w-8 rounded-lg border border-slate-200 text-slate-700 font-bold disabled:opacity-40 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Resumo do pedido — atualiza conforme forma de pagamento, taxas e cupom */}
                 {inscritos.some((i) => i.batchId) && (
                   <div className="portal-document-card bg-white rounded-2xl p-5">
@@ -2664,6 +2726,12 @@ export default function EventDetails() {
                               : 'Cupom'}
                           </span>
                           <span className="text-green-700 tabular-nums">− R$ {Math.min(desconto, subtotal).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {addonsTotal > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Adicionais</span>
+                          <span className="text-slate-900 tabular-nums">+ R$ {addonsTotal.toFixed(2)}</span>
                         </div>
                       )}
                       {isBalanceDue && (

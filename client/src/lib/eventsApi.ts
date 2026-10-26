@@ -85,6 +85,9 @@ export interface Event {
     enabled?: boolean;
     tiers?: Array<{ minQty: number; priceEach: number }>;
   } | null;
+  // Adicionais/bônus opcionais (quantidade livre). Somam por cima do ingresso,
+  // fora do desconto por quantidade e do cupom.
+  addons?: Array<{ id: string; nome: string; preco: number; max?: number | null }> | null;
 }
 
 export interface LiabilityTerm {
@@ -218,6 +221,9 @@ export interface RegistrationData {
     data: Record<string, any>;
   }>;
   couponCode?: string;
+  // Adicionais/bônus escolhidos (quantidade livre). O backend recalcula o preço
+  // a partir do catálogo do evento, somando por cima do ingresso.
+  adicionais?: Array<{ id: string; quantidade: number }>;
   paymentOptionId?: string;
   paymentData?: {
     cardNumber?: string;
