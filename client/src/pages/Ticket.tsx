@@ -57,6 +57,12 @@ interface Registration {
     amount: number;
     status?: string | null;
   }>;
+  addons?: Array<{
+    id?: string;
+    nome: string;
+    preco: number;
+    quantidade: number;
+  }> | null;
 }
 
 const EVENT_DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
@@ -371,6 +377,25 @@ export default function Ticket() {
                 </p>
               )}
             </div>
+
+            {Array.isArray(registration.addons) && registration.addons.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="text-sm font-semibold text-slate-700 mb-1.5">Adicionais incluídos</p>
+                <ul className="space-y-1">
+                  {registration.addons.map((ad, i) => (
+                    <li key={ad.id || i} className="flex justify-between text-sm text-slate-600">
+                      <span>
+                        {ad.nome}
+                        {Number(ad.quantidade) > 1 ? ` ×${ad.quantidade}` : ''}
+                      </span>
+                      <span className="tabular-nums">
+                        {formatBRL((Number(ad.preco) || 0) * (Number(ad.quantidade) || 0))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {!isCancelled && (
               <>

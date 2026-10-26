@@ -103,6 +103,15 @@
 .kit-delivery-details .kit-attendee { margin: 12px 0 18px; }
 .kit-message .kit-attendee { color: var(--kit-ink); font-size: 23px; }
 .kit-delivery-details > p:not(.kit-attendee) { color: var(--kit-muted); font-size: 14px; line-height: 1.7; }
+/* Adicionais do pedido (ex.: copo) — destaque para o operador entregar junto do kit */
+.kit-addons { margin-top: 16px; border-radius: 10px; padding: 12px 14px; }
+.kit-addons-has { background: #fff7e6; border: 1px solid #f3cf7a; }
+.kit-addons-has .kit-eyebrow { color: #92600a; }
+.kit-addons-has ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.kit-addons-has li { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #7a4e06; }
+.kit-addons-has .kit-addons-hint { display: block; margin-top: 8px; font-size: 11px; font-weight: 500; color: #92600a; opacity: 0.85; }
+.kit-addons-none { background: var(--kit-paper); border: 1px dashed var(--kit-line); font-size: 13px; color: var(--kit-muted); text-align: center; }
+
 .kit-print-status { border-top: 1px solid var(--kit-line); margin-top: 28px; padding-top: 24px; }
 .kit-print-status > div:first-child { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .kit-progress { height: 4px; border-radius: 2px; margin-top: 15px; background: var(--kit-line); overflow: hidden; }

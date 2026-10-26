@@ -732,6 +732,8 @@ export interface KitDeliveryResponse {
   eventId: string;
   imprimeEtiqueta: boolean;
   deliveredAt?: string;
+  // Adicionais/bônus do pedido (ex.: copo) para o operador entregar junto do kit.
+  addons?: Array<{ id?: string; nome: string; preco: number; quantidade: number }> | null;
 }
 
 export const buscarConfigKit = async (eventId: string): Promise<KitConfigResponse> => {

@@ -237,6 +237,29 @@ export default function KitRetirada() {
   const fg = entregue ? textoSobre(corKit) : '#fff';
   const etapa = estado === 'resultado' ? 3 : estado === 'scanning' || estado === 'processando' ? 2 : 1;
 
+  // Bloco de adicionais do pedido (ex.: copo): mostra SE tem adicional a entregar ou não,
+  // para o operador não esquecer de entregar o bônus junto do kit.
+  const renderAdicionais = () => {
+    const addons = resultado?.addons || [];
+    if (addons.length > 0) {
+      return (
+        <div className="kit-addons kit-addons-has">
+          <span className="kit-eyebrow">Adicionais a entregar</span>
+          <ul>
+            {addons.map((ad, i) => (
+              <li key={ad.id || i}>
+                <Package size={15} aria-hidden="true" />
+                <span>{ad.nome}{Number(ad.quantidade) > 1 ? ` ×${ad.quantidade}` : ''}</span>
+              </li>
+            ))}
+          </ul>
+          <small className="kit-addons-hint">Do pedido — entregar 1× por pedido (não por inscrito).</small>
+        </div>
+      );
+    }
+    return <div className="kit-addons kit-addons-none">Sem adicional</div>;
+  };
+
   return (
     <div className="kit-page">
       {/* Folha da etiqueta real renderizada (oculta) para o PDF poder rasterizá-la.
@@ -387,6 +410,7 @@ export default function KitRetirada() {
                   <h1>Este kit já foi retirado.</h1>
                   <p className="kit-attendee">{resultado.attendeeName}</p>
                   {resultado.sector && <span className="kit-result-sector">Setor {resultado.sector}</span>}
+                  {renderAdicionais()}
                   <p className="kit-message-hint">Em caso de dúvida, procure a equipe de entrega.</p>
                 </div>
               ) : entregue ? (
@@ -399,6 +423,7 @@ export default function KitRetirada() {
                   <div className="kit-delivery-details">
                     <span className="kit-eyebrow">Preparado para</span>
                     <p className="kit-attendee">{resultado!.attendeeName}</p>
+                    {renderAdicionais()}
                     <p>Apresente esta confirmação à equipe e retire seu kit.</p>
                     {resultado!.imprimeEtiqueta && (
                       <div className="kit-print-status">
