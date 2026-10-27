@@ -2,15 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin, Users, Loader2, CheckCircle2, XCircle, FileText, Printer } from 'lucide-react';
+import { Calendar, MapPin, Users, Loader2, CheckCircle2, XCircle, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import { formatEventDate, formatEventDateTime } from '../lib/eventDateTime';
 import { UpgradeSectorDialog } from '@/components/UpgradeSectorDialog';
 import { ArrowUpRight, Pencil } from 'lucide-react';
-import { LabelSheet, type LabelRenderItem } from '@/components/LabelSheet';
-import { montarEtiquetasPedido } from '@/lib/labelData';
-import type { LabelTemplateResponse } from '@/lib/eventsApi';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -128,8 +125,6 @@ export default function Ticket() {
   const [editAttendee, setEditAttendee] = useState<{ id: string; name: string } | null>(null);
   const [editNome, setEditNome] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
-  const [labelPrint, setLabelPrint] = useState<{ template: LabelTemplateResponse['template']; items: LabelRenderItem[] } | null>(null);
-  const [printingLabel, setPrintingLabel] = useState(false);
 
   const loadRegistration = useCallback(async (orderCode: string) => {
     try {
@@ -146,7 +141,6 @@ export default function Ticket() {
 
       const cancelled = isCancelledStatus(data.paymentStatus);
       setAttendeeQRCodes({});
-      setLabelPrint(null); // dados recarregados → força reconstruir a etiqueta na próxima impressão
 
       if (cancelled) {
         return;
@@ -226,31 +220,6 @@ export default function Ticket() {
     loadRegistration(params.orderCode);
   }, [match, params?.orderCode, navigate, loadRegistration]);
 
-  // Imprime SÓ a etiqueta, direto na impressora, no formato da etiqueta
-  // (mesmo mecanismo da retirada do kit: LabelSheet com screenHidden + autoPrint).
-  const imprimirEtiqueta = async () => {
-    if (!registration?.event?.id) return;
-    // Já preparada: só reenvia para a impressora.
-    if (labelPrint) { window.print(); return; }
-    setPrintingLabel(true);
-    try {
-      const et = await montarEtiquetasPedido(registration.event.id, registration.orderCode);
-      if (!et) {
-        toast.error('Este evento não tem um modelo de etiqueta configurado.');
-        return;
-      }
-      if (et.items.length === 0) {
-        toast.error('Nenhum inscrito encontrado para gerar a etiqueta.');
-        return;
-      }
-      setLabelPrint(et); // o autoPrint do LabelSheet dispara a impressão ao ficar pronto
-    } catch {
-      toast.error('Não foi possível preparar a etiqueta.');
-    } finally {
-      setPrintingLabel(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="portal-page min-h-screen flex items-center justify-center">
@@ -297,7 +266,6 @@ export default function Ticket() {
 
   return (
     <div className="portal-page min-h-screen bg-background py-12 px-4">
-      {labelPrint && <LabelSheet template={labelPrint.template} items={labelPrint.items} screenHidden autoPrint />}
       <div className="container max-w-2xl mx-auto space-y-6">
         {/* Header de Status */}
         <div className="text-center space-y-2">
@@ -577,24 +545,9 @@ export default function Ticket() {
             )}
 
             {!isCancelled ? (
-              <>
-                <Button
-                  onClick={imprimirEtiqueta}
-                  className="w-full"
-                  size="lg"
-                  disabled={printingLabel}
-                >
-                  {printingLabel ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Printer className="w-4 h-4 mr-2" />
-                  )}
-                  Imprimir etiqueta
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  Apresente o QR Code na entrada do evento. Se precisar, imprima sua etiqueta aqui.
-                </p>
-              </>
+              <p className="text-xs text-center text-muted-foreground">
+                Apresente o QR Code na entrada do evento. A etiqueta é impressa pela equipe na retirada do kit / check-in.
+              </p>
             ) : (
               <p className="text-xs text-center text-rose-600">
                 Este pedido foi cancelado e não é possível gerar ou apresentar o ticket.
