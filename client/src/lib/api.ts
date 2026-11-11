@@ -28,6 +28,7 @@ export interface EventSummary {
   status?: string | null;
   location?: string;
   description?: string;
+  isBaptism?: boolean;
 }
 
 export interface CheckInSchedulePayload {

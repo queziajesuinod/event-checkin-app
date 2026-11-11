@@ -1839,7 +1839,26 @@ export default function EventDetails() {
                       const qty = quantities[lote.id] || 0;
 
                       return (
-                        <div key={lote.id} className="space-y-2.5">
+                        <div
+                          key={lote.id}
+                          className={`space-y-2.5 rounded-xl border p-3.5 transition-colors ${
+                            !disponivel
+                              ? 'border-slate-100 bg-slate-50'
+                              : qty > 0
+                                ? 'border-primary bg-primary/5 shadow-sm'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                          style={
+                            palette && disponivel && qty > 0
+                              ? {
+                                  borderColor: palette.accent,
+                                  backgroundColor: palette.accent
+                                    .replace('rgb(', 'rgba(')
+                                    .replace(')', ', 0.08)'),
+                                }
+                              : undefined
+                          }
+                        >
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold text-slate-900 leading-snug">{lote.name}</p>

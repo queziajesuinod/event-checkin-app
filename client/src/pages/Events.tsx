@@ -179,6 +179,7 @@ const sanitizeEventForOffline = (event: EventSummary): EventSummary => {
     active: event.active,
     ativo: event.ativo,
     status: event.status,
+    isBaptism: event.isBaptism,
   };
 };
 
@@ -203,7 +204,7 @@ const readEventsCache = () => {
   }
 };
 
-export default function Events() {
+export default function Events({ baptismOnly = false }: { baptismOnly?: boolean } = {}) {
   const { user } = useAuth();
   useHeader({ backTo: '/home', backLabel: 'Início' });
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -355,6 +356,10 @@ export default function Events() {
 
   const [offlineExpanded, setOfflineExpanded] = useState(false);
 
+  // No menu Batismo, lista só os eventos marcados como batismo (flag isBaptism no portal).
+  const visibleEvents = baptismOnly ? events.filter((event) => event.isBaptism === true) : events;
+  const scopeLabel = baptismOnly ? 'Batismo' : 'Eventos';
+
   return (
     <div className="portal-page min-h-screen" style={{ backgroundColor: '#f1f4f7' }}>
 
@@ -418,10 +423,10 @@ export default function Events() {
             Disponíveis
           </p>
           <div className="flex items-end justify-between">
-            <h2 className="text-2xl font-extrabold" style={{ color: '#172b46' }}>Eventos</h2>
-            {!isLoading && events.length > 0 && (
+            <h2 className="text-2xl font-extrabold" style={{ color: '#172b46' }}>{scopeLabel}</h2>
+            {!isLoading && visibleEvents.length > 0 && (
               <span className="text-xs font-medium mb-1" style={{ color: '#9CA3AF' }}>
-                {events.length} evento{events.length > 1 ? 's' : ''}
+                {visibleEvents.length} evento{visibleEvents.length > 1 ? 's' : ''}
               </span>
             )}
           </div>
@@ -444,7 +449,7 @@ export default function Events() {
             <p className="text-sm" style={{ color: '#9CA3AF' }}>Carregando eventos...</p>
           </div>
 
-        ) : events.length === 0 ? (
+        ) : visibleEvents.length === 0 ? (
           <div
             className="text-center py-16 rounded-2xl"
             style={{ backgroundColor: '#fff', boxShadow: '0 2px 12px rgba(10,31,63,0.08)' }}
@@ -462,7 +467,7 @@ export default function Events() {
         ) : (
           /* ── Lista de eventos ── */
           <div className="grid grid-cols-1 gap-3">
-            {events.map((event, i) => {
+            {visibleEvents.map((event, i) => {
               const eventImageSrc = resolveEventImageSrc(event.imageUrl);
               const eventPeriod = formatEventPeriod(event);
               const title = event.title || event.name || 'Evento sem título';

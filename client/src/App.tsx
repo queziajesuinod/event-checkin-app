@@ -59,6 +59,7 @@ function Router() {
       <Route path={"/inscricao/:orderCode/sucesso"} component={RegistrationSuccess} />
       <Route path={"/ticket/:orderCode"} component={Ticket} />
       <Route path={"/events"} component={() => <ProtectedRoute component={Events} />} />
+      <Route path={"/batismo"} component={() => <ProtectedRoute component={() => <Events baptismOnly />} />} />
       <Route path={"/home"} component={() => <ProtectedRoute component={Home} />} />
       <Route path={"/profile"} component={() => <ProtectedRoute component={Profile} />} />
       <Route path={"/checkin/:eventId"} component={() => <ProtectedRoute component={CheckIn} />} />

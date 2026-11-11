@@ -1,7 +1,7 @@
 import { type CSSProperties } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { useHeader } from "@/contexts/HeaderContext";
-import { Calendar, Church, ChevronRight, Users, MessageCircleQuestion, QrCode } from "lucide-react";
+import { Calendar, Church, ChevronRight, Users, MessageCircleQuestion, QrCode, Droplets } from "lucide-react";
 import { useLocation } from "wouter";
 
 function greeting() {
@@ -45,6 +45,7 @@ export default function Home() {
 
   const modules = [
     { visible: showEventos, title: 'Eventos', description: 'Inscrições, check-in e gestão.', icon: Calendar, color: '#244ac0', href: '/events' },
+    { visible: showEventos, title: 'Batismo', description: 'Check-in de batismo por QR Code.', icon: Droplets, color: '#1f7a8c', href: '/batismo' },
     { visible: showCultos, title: 'Cultos', description: 'Registros e presença da igreja.', icon: Church, color: '#8c672b', href: '/cultos' },
     { visible: showCelula, title: 'Minha célula', description: 'Membros, encontros e presença.', icon: Users, color: '#28745f', href: '/celula' },
     { visible: showPerguntas, title: 'Perguntas ao vivo', description: 'Salas e moderação de perguntas.', icon: MessageCircleQuestion, color: '#695592', href: '/perguntas' },
