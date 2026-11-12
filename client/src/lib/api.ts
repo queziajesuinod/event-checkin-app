@@ -29,6 +29,7 @@ export interface EventSummary {
   location?: string;
   description?: string;
   isBaptism?: boolean;
+  hasCheckInSchedules?: boolean;
 }
 
 export interface CheckInSchedulePayload {

@@ -260,6 +260,8 @@ export default function Ticket() {
     (normalizedPaymentStatus === 'confirmed' ||
       normalizedPaymentStatus === 'paid' ||
       valorRestante <= 0);
+  // Evento gratuito (ex.: batismo): não mostra valores/pagamento no ingresso.
+  const isFree = Number(registration.finalPrice ?? 0) <= 0;
 
   const formatBRL = (value: number) =>
     `R$ ${Number(value).toFixed(2).replace('.', ',')}`;
@@ -465,9 +467,11 @@ export default function Ticket() {
                             Lote: {attendee.batch.name}
                           </p>
                         </div>
-                        <p className="font-semibold shrink-0">
-                          R$ {Number(attendee.batch.price).toFixed(2).replace('.', ',')}
-                        </p>
+                        {!isFree && (
+                          <p className="font-semibold shrink-0">
+                            R$ {Number(attendee.batch.price).toFixed(2).replace('.', ',')}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
@@ -487,51 +491,56 @@ export default function Ticket() {
               )}
             </div>
 
-            <TicketDivider />
+            {/* Valores e pagamento — ocultos em evento gratuito (ex.: batismo) */}
+            {!isFree && (
+              <>
+                <TicketDivider />
 
-            {/* Total / Parcial */}
-            {isPartial ? (
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Valor total</span>
-                  <span className="font-medium">{formatBRL(registration.finalPrice)}</span>
+                {/* Total / Parcial */}
+                {isPartial ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Valor total</span>
+                      <span className="font-medium">{formatBRL(registration.finalPrice)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Valor pago</span>
+                      <span className="font-semibold text-green-700">{formatBRL(valorPago)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Saldo restante</span>
+                      <span className="font-semibold text-amber-700">{formatBRL(valorRestante)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center text-lg font-bold">
+                    <span>Total Pago</span>
+                    <span className="text-primary">{formatBRL(registration.finalPrice)}</span>
+                  </div>
+                )}
+
+                {/* Status do Pagamento */}
+                <div
+                  className={`p-3 rounded-lg ${
+                    isCancelled ? 'bg-rose-50' : isPartial ? 'bg-amber-50' : isPaid ? 'bg-green-50' : 'bg-yellow-50'
+                  }`}
+                >
+                  <p
+                    className={`text-sm font-medium ${
+                      isCancelled ? 'text-rose-700' : isPartial ? 'text-amber-700' : isPaid ? 'text-green-700' : 'text-yellow-700'
+                    }`}
+                  >
+                    {isCancelled
+                      ? 'Inscrição Cancelada'
+                      : isPartial
+                        ? '⏳ Pagamento parcial — há saldo a quitar'
+                        : isPaid
+                          ? '✓ Pagamento Confirmado'
+                          : '⌛ Aguardando Pagamento'}
+                  </p>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Valor pago</span>
-                  <span className="font-semibold text-green-700">{formatBRL(valorPago)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Saldo restante</span>
-                  <span className="font-semibold text-amber-700">{formatBRL(valorRestante)}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Total Pago</span>
-                <span className="text-primary">{formatBRL(registration.finalPrice)}</span>
-              </div>
+              </>
             )}
-
-            {/* Status do Pagamento */}
-            <div
-              className={`p-3 rounded-lg ${
-                isCancelled ? 'bg-rose-50' : isPartial ? 'bg-amber-50' : isPaid ? 'bg-green-50' : 'bg-yellow-50'
-              }`}
-            >
-              <p
-                className={`text-sm font-medium ${
-                  isCancelled ? 'text-rose-700' : isPartial ? 'text-amber-700' : isPaid ? 'text-green-700' : 'text-yellow-700'
-                }`}
-              >
-                {isCancelled
-                  ? 'Inscrição Cancelada'
-                  : isPartial
-                  ? '⏳ Pagamento parcial — há saldo a quitar'
-                  : isPaid
-                  ? '✓ Pagamento Confirmado'
-                  : '⌛ Aguardando Pagamento'}
-              </p>
-            </div>
 
             {/* Botão de quitação para pagamento parcial */}
             {isPartial && (

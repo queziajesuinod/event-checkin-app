@@ -180,6 +180,7 @@ const sanitizeEventForOffline = (event: EventSummary): EventSummary => {
     ativo: event.ativo,
     status: event.status,
     isBaptism: event.isBaptism,
+    hasCheckInSchedules: event.hasCheckInSchedules,
   };
 };
 
@@ -356,8 +357,13 @@ export default function Events({ baptismOnly = false }: { baptismOnly?: boolean 
 
   const [offlineExpanded, setOfflineExpanded] = useState(false);
 
-  // No menu Batismo, lista só os eventos marcados como batismo (flag isBaptism no portal).
-  const visibleEvents = baptismOnly ? events.filter((event) => event.isBaptism === true) : events;
+  // Menu Batismo: só eventos de batismo. Lista geral de Eventos: só eventos que têm
+  // check-in configurado (hasCheckInSchedules) e que NÃO são de batismo (esses ficam só no menu Batismo).
+  // hasCheckInSchedules !== false: eventos sem check-in (false, vindos do backend novo) somem;
+  // se o backend ainda não enviar o campo (undefined), não esvazia a lista na transição.
+  const visibleEvents = baptismOnly
+    ? events.filter((event) => event.isBaptism === true)
+    : events.filter((event) => event.isBaptism !== true && event.hasCheckInSchedules !== false);
   const scopeLabel = baptismOnly ? 'Batismo' : 'Eventos';
 
   return (

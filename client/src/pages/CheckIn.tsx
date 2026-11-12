@@ -1492,7 +1492,7 @@ export default function CheckIn() {
 
     const termoBruto = manualCode.trim();
     if (!termoBruto) {
-      throw new Error('Informe o código de inscrição ou o e-mail do comprador.');
+      throw new Error('Informe o código, o nome ou o e-mail do inscrito.');
     }
 
     // E-mails são comparados em minúsculas; códigos (REG-...) mantêm-se como estão.
@@ -1504,7 +1504,7 @@ export default function CheckIn() {
 
     const attendees = normalizeOrderAttendees(response.data, termo);
     if (attendees.length === 0) {
-      throw new Error('Nenhum inscrito encontrado para este código ou e-mail.');
+      throw new Error('Nenhum inscrito encontrado para este código, nome ou e-mail.');
     }
 
     return attendees;
@@ -1512,7 +1512,7 @@ export default function CheckIn() {
 
   const handleLoadManualAttendees = async () => {
     if (!manualCode.trim()) {
-      setError('Informe o código de inscrição ou o e-mail do comprador.');
+      setError('Informe o código, o nome ou o e-mail do inscrito.');
       return;
     }
     if (!isOnline) {
@@ -1770,7 +1770,7 @@ export default function CheckIn() {
 
             {[
               { key: 'qrcode' as const, icon: <QrCode className="w-6 h-6" />, title: 'QR Code', desc: 'Escaneie o código QR do participante' },
-              { key: 'manual' as const, icon: <Type className="w-6 h-6" />, title: 'Manual', desc: 'Código do pedido ou e-mail do comprador' },
+              { key: 'manual' as const, icon: <Type className="w-6 h-6" />, title: 'Manual', desc: 'Código, nome ou e-mail do inscrito' },
             ].map(({ key, icon, title, desc }) => (
               <button
                 key={key}
@@ -1812,7 +1812,7 @@ export default function CheckIn() {
                   {method === 'qrcode' ? 'QR Code' : 'Manual'}
                 </p>
                 <h2 className="text-lg font-extrabold leading-tight" style={{ color: '#172b46' }}>
-                  {method === 'qrcode' ? 'Escanear código' : 'Inserir código ou e-mail'}
+                  {method === 'qrcode' ? 'Escanear código' : 'Inserir código, nome ou e-mail'}
                 </h2>
               </div>
             </div>
@@ -1822,11 +1822,11 @@ export default function CheckIn() {
               <form onSubmit={handleManualSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#6B7280' }}>
-                    Código de inscrição ou e-mail do comprador
+                    Código, nome ou e-mail do inscrito
                   </label>
                   <Input
                     type="text"
-                    placeholder="Código do pedido ou e-mail do comprador..."
+                    placeholder="Código, nome ou e-mail do inscrito..."
                     value={manualCode}
                     onChange={(e) => {
                       setManualCode(e.target.value);
