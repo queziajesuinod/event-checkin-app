@@ -477,8 +477,10 @@ export default function EventDetails() {
       if (prev.length < 2) return prev;
       const base = prev[0];
       if (base.id === id) return prev;
+      // Dados idênticos ao 1º: se ele estiver válido, a cópia já entra salva.
+      const baseValido = validarDadosInscrito(base, 0) === null;
       return prev.map((i) =>
-        i.id === id ? { ...i, dados: { ...base.dados }, salvo: false } : i
+        i.id === id ? { ...i, dados: { ...base.dados }, salvo: baseValido } : i
       );
     });
     toast.success('Dados copiados do Inscrito 1');
@@ -489,8 +491,9 @@ export default function EventDetails() {
     setInscritos((prev) => {
       if (prev.length < 2) return prev;
       const base = prev[0];
+      const baseValido = validarDadosInscrito(base, 0) === null;
       return prev.map((i, idx) =>
-        idx === 0 ? i : { ...i, dados: { ...base.dados }, salvo: false }
+        idx === 0 ? i : { ...i, dados: { ...base.dados }, salvo: baseValido }
       );
     });
     toast.success('Dados do Inscrito 1 copiados para os demais');
