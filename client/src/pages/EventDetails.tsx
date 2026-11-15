@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
-import { Calendar, MapPin, Tag, Loader2, ArrowLeft, CreditCard, QrCode, Plus, Check, X, Clock } from 'lucide-react';
+import { Calendar, MapPin, Tag, Loader2, ArrowLeft, CreditCard, QrCode, Plus, Check, X, Clock, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
 import {
@@ -467,6 +467,33 @@ export default function EventDetails() {
     }
     // Usar funcional para garantir estado mais recente e evitar problemas de concorrência no DOM
     setInscritos(prev => prev.filter((i) => i.id !== id));
+  };
+
+  // Copia os dados do formulário do 1º inscrito para um inscrito específico.
+  // Útil quando vários inscritos compartilham os mesmos dados (ex.: compra de
+  // produto em nome da mesma pessoa). O lote de cada inscrito é preservado.
+  const copiarDadosDoPrimeiro = (id: string) => {
+    setInscritos((prev) => {
+      if (prev.length < 2) return prev;
+      const base = prev[0];
+      if (base.id === id) return prev;
+      return prev.map((i) =>
+        i.id === id ? { ...i, dados: { ...base.dados }, salvo: false } : i
+      );
+    });
+    toast.success('Dados copiados do Inscrito 1');
+  };
+
+  // Copia os dados do 1º inscrito para todos os demais de uma vez.
+  const copiarDadosDoPrimeiroParaTodos = () => {
+    setInscritos((prev) => {
+      if (prev.length < 2) return prev;
+      const base = prev[0];
+      return prev.map((i, idx) =>
+        idx === 0 ? i : { ...i, dados: { ...base.dados }, salvo: false }
+      );
+    });
+    toast.success('Dados do Inscrito 1 copiados para os demais');
   };
 
   const campoPreenchido = (valor: unknown): boolean => {
@@ -2107,16 +2134,30 @@ export default function EventDetails() {
                         {inscritos.filter((i) => i.salvo).length}/{inscritos.length} salvo(s)
                       </p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={adicionarInscrito}
-                      disabled={(!hasLotAvailable && !modoListaEspera) || inscritos.length >= (evento?.maxPerBuyer || Infinity)}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      Adicionar
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {inscritos.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={copiarDadosDoPrimeiroParaTodos}
+                          className="text-slate-600"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" />
+                          Copiar 1º p/ todos
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={adicionarInscrito}
+                        disabled={(!hasLotAvailable && !modoListaEspera) || inscritos.length >= (evento?.maxPerBuyer || Infinity)}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Adicionar
+                      </Button>
+                    </div>
                   </div>
 
                   <Accordion
@@ -2215,11 +2256,22 @@ export default function EventDetails() {
                                 </div>
                               ))}
                             </div>
-                            <div className="flex gap-2 pt-2">
+                            <div className="flex flex-wrap gap-2 pt-2">
                               <Button type="button" size="sm" onClick={() => salvarInscrito(inscrito.id)} disabled={inscrito.salvo} style={accentButtonStyle(!inscrito.salvo)}>
                                 <Check className="h-3.5 w-3.5 mr-1.5" />
                                 Salvar
                               </Button>
+                              {index > 0 && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => copiarDadosDoPrimeiro(inscrito.id)}
+                                >
+                                  <Copy className="h-3.5 w-3.5 mr-1.5" />
+                                  Copiar dados do Inscrito 1
+                                </Button>
+                              )}
                               {inscritos.length > 1 && (
                                 <Button type="button" variant="ghost" size="sm" onClick={() => removerInscrito(inscrito.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                                   <X className="h-3.5 w-3.5 mr-1.5" />
@@ -2277,10 +2329,32 @@ export default function EventDetails() {
                   ));
                 })()}
 
-                <div className="border-t border-slate-100 mt-3 pt-3 flex justify-between items-center font-bold">
+                {desconto > 0 && (
+                  <div className="border-t border-slate-100 mt-3 pt-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Subtotal</span>
+                      <span className="text-slate-500 tabular-nums line-through">
+                        R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-700 flex items-center gap-1">
+                        <Tag className="h-3.5 w-3.5" />
+                        {descontoOrigem === 'quantidade'
+                          ? `Desconto (${infoDescontoQtd.minQty}+ ingressos)`
+                          : 'Cupom'}
+                      </span>
+                      <span className="text-green-700 tabular-nums">
+                        − R$ {Math.min(desconto, subtotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className={`${desconto > 0 ? 'mt-2 pt-2 border-t border-slate-100' : 'border-t border-slate-100 mt-3 pt-3'} flex justify-between items-center font-bold`}>
                   <span className="text-slate-700 text-sm">Total Ingressos</span>
                   <span className="text-lg text-slate-900">
-                    R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {Math.max(0, subtotal - desconto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
