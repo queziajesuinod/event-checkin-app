@@ -205,7 +205,16 @@ const writeCultosQueue = (queue: OfflineQueuedCulto[]) => {
   localStorage.setItem(CULTOS_OFFLINE_QUEUE_KEY, JSON.stringify(queue));
 };
 
-const hoje = () => new Date().toISOString().slice(0, 10);
+// Data local no formato YYYY-MM-DD. NÃO usar toISOString() aqui: ele converte para
+// UTC e, em fusos a oeste (ex.: Campo Grande, UTC-4), à noite o dia em UTC já é o
+// seguinte — fazendo o seletor pré-preencher o dia errado (grava 14 quando é 13).
+const hoje = () => {
+  const d = new Date();
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+};
 
 const getStoredUserId = (): string | undefined => {
   try {
