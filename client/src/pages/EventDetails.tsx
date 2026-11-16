@@ -779,11 +779,14 @@ export default function EventDetails() {
         return lote ? Number(lote.price) : 0;
       });
     const qtd = precos.length;
+    // Só faixas com preço-teto entram no cálculo de preço (faixa só de parcelas sem taxa
+    // não altera o valor). Pega a de maior minQty atingido entre as que têm preço.
     let faixa: { minQty: number; priceEach: number } | null = null;
     qd.tiers.forEach((t) => {
       const minQty = Number(t.minQty);
-      if (qtd >= minQty && (!faixa || minQty > faixa.minQty)) {
-        faixa = { minQty, priceEach: Number(t.priceEach) };
+      const priceEach = Number(t.priceEach);
+      if (Number.isFinite(priceEach) && qtd >= minQty && (!faixa || minQty > faixa.minQty)) {
+        faixa = { minQty, priceEach };
       }
     });
     if (!faixa) return { desconto: 0, priceEach: 0, minQty: 0, aplicado: false };
@@ -1653,7 +1656,8 @@ export default function EventDetails() {
     const faixaPreSel = (qdPre && qdPre.enabled !== false && Array.isArray(qdPre.tiers))
       ? (qdPre.tiers
         .map((t) => ({ minQty: Number(t.minQty), priceEach: Number(t.priceEach) }))
-        .filter((t) => precosSelecionados.length >= t.minQty)
+        // só faixas com preço-teto alteram o valor (faixa só de parcelas sem taxa não entra)
+        .filter((t) => Number.isFinite(t.priceEach) && precosSelecionados.length >= t.minQty)
         .sort((a, b) => b.minQty - a.minQty)[0] || null)
       : null;
     const totalAmountComDesconto = faixaPreSel

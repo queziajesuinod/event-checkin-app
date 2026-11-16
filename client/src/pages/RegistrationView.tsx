@@ -380,9 +380,11 @@ export default function RegistrationView() {
     return map;
   }, [formFields]);
 
+  // Pode pagar quando ainda há saldo em aberto — vale para SINGLE (pagamento único) e
+  // BALANCE_DUE. No SINGLE isso habilita trocar a forma escolhida no início (ex.: pediu
+  // PIX e quer pagar no cartão): mostra o form de pagamento junto do QR pendente.
   const canPay =
     registration &&
-    isBalanceDueMode &&
     !isPaid &&
     !isCancelled &&
     remainingSemJuros > 0;
@@ -457,12 +459,13 @@ export default function RegistrationView() {
     }
   }, [isApprovedDepositEntry, approvedDepositCapped]);
 
-  // No modo "valor integral" mantém o campo sincronizado com o saldo restante
+  // No modo "valor integral" (e sempre no SINGLE, que não tem pagamento parcial)
+  // mantém o campo sincronizado com o saldo restante.
   useEffect(() => {
-    if (!isApprovedDepositEntry && amountMode === 'integral') {
+    if (!isApprovedDepositEntry && (amountMode === 'integral' || !isBalanceDueMode)) {
       setAmount(formatNumberInput(remainingSemJuros));
     }
-  }, [amountMode, remainingSemJuros, isApprovedDepositEntry]);
+  }, [amountMode, remainingSemJuros, isApprovedDepositEntry, isBalanceDueMode]);
 
   useEffect(() => {
     if (method === 'credit_card' && installments > maxInstallments) {
@@ -796,7 +799,9 @@ export default function RegistrationView() {
                 Forma de pagamento
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                Escolha como pagar e o valor. O saldo será atualizado automaticamente.
+                {isBalanceDueMode
+                  ? 'Escolha como pagar e o valor. O saldo será atualizado automaticamente.'
+                  : 'Escolha como pagar. O status será atualizado automaticamente após o pagamento.'}
               </p>
             </div>
 
@@ -887,6 +892,18 @@ export default function RegistrationView() {
                           <p className="text-xs text-slate-500 mt-0.5">Este é o valor da sua entrada. O saldo restante fica para os próximos pagamentos.</p>
                         </div>
                         <span className="ml-4 shrink-0 font-bold text-primary">{formatCurrency(approvedDepositCapped)}</span>
+                      </div>
+                    </div>
+                  ) : !isBalanceDueMode ? (
+                    // Pagamento único: paga sempre o valor total, sem opção de valor parcial.
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Valor a pagar</p>
+                      <div className="flex items-center justify-between rounded-xl border border-primary bg-primary/5 px-4 py-3">
+                        <div>
+                          <p className="font-medium text-slate-800">Valor total da inscrição</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Escolha a forma de pagamento acima para quitar a inscrição.</p>
+                        </div>
+                        <span className="ml-4 shrink-0 font-bold text-primary">{formatCurrency(remainingSemJuros)}</span>
                       </div>
                     </div>
                   ) : (
