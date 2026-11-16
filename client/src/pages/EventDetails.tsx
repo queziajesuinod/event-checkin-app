@@ -46,6 +46,7 @@ import {
   detectCardBrandKey,
   getCieloInstallmentRate,
   isInstallmentInterestFree,
+  freeInstallmentsForQuantity,
 } from '@/lib/installmentInterest';
 import { getCieloDeniedMessage } from '@/lib/paymentDenialReason';
 import { translatePaymentError } from '@/lib/paymentErrorMessages';
@@ -808,6 +809,12 @@ export default function EventDetails() {
   const bandeiraCartao = detectCardBrandKey(dadosPagamento.cardNumber || '');
   const bandeiraParaCalculo = bandeiraCartao || 'visa';
 
+  // Parcelas sem taxa liberadas pela QUANTIDADE do pedido (desconto por quantidade do
+  // evento): ex.: "acima de 30 itens → até 3x sem taxa". Eleva o limite sem juros da
+  // forma de pagamento. Espelha o back-end (aplicado na cobrança por quantidade).
+  const qtdPedido = inscritos.filter((i) => i.batchId).length;
+  const freeInstallmentsQtd = freeInstallmentsForQuantity(evento?.quantityDiscount, qtdPedido);
+
   const calcularValorTotal = (installments = parcelas) => {
     const subtotal = calcularSubtotal();
     if (subtotal === 0) return 0;
@@ -823,7 +830,7 @@ export default function EventDetails() {
       evento?.registrationPaymentMode !== 'BALANCE_DUE'
     ) {
       const pagamento = findPaymentOption(formaPagamento);
-      total = applyBrandInstallmentInterest(totalSemTaxas, pagamento, installments, taxasCartao, bandeiraParaCalculo);
+      total = applyBrandInstallmentInterest(totalSemTaxas, pagamento, installments, taxasCartao, bandeiraParaCalculo, freeInstallmentsQtd);
     }
 
     return Math.max(0, total);
@@ -1167,7 +1174,7 @@ export default function EventDetails() {
 
       const pagamentoBase = isBalanceDue ? baseDepositoSemJuros : totalSemJuros;
       const taxaPagamento = selectedPaymentOption?.paymentType === 'credit_card'
-        ? calculateBrandInstallmentInterestAmount(pagamentoBase, selectedPaymentOption, parcelas, taxasCartao, bandeiraParaCalculo)
+        ? calculateBrandInstallmentInterestAmount(pagamentoBase, selectedPaymentOption, parcelas, taxasCartao, bandeiraParaCalculo, freeInstallmentsQtd)
         : 0;
       const pagamentoTotal = Number((pagamentoBase + taxaPagamento).toFixed(2));
       const resultado = await processarInscricao({
@@ -1491,7 +1498,7 @@ export default function EventDetails() {
 
   const depositoComJuros =
     isBalanceDue && selectedPaymentOption?.paymentType === 'credit_card' && parcelas > 1
-      ? applyBrandInstallmentInterest(baseDepositoSemJuros, selectedPaymentOption, parcelas, taxasCartao, bandeiraParaCalculo)
+      ? applyBrandInstallmentInterest(baseDepositoSemJuros, selectedPaymentOption, parcelas, taxasCartao, bandeiraParaCalculo, freeInstallmentsQtd)
       : baseDepositoSemJuros;
 
   const pagamentoAgora = isBalanceDue ? depositoComJuros : totalComTaxas;
@@ -2546,14 +2553,14 @@ export default function EventDetails() {
                               <SelectContent>
                                 {Array.from({ length: selectedPaymentOption?.maxInstallments || 1 }, (_, i) => i + 1).map((p) => {
                                   const baseCalculo = isBalanceDue ? baseDepositoSemJuros : subtotal - desconto;
-                                  const totalParcelado = applyBrandInstallmentInterest(baseCalculo, selectedPaymentOption, p, taxasCartao, bandeiraParaCalculo);
+                                  const totalParcelado = applyBrandInstallmentInterest(baseCalculo, selectedPaymentOption, p, taxasCartao, bandeiraParaCalculo, freeInstallmentsQtd);
                                   const valorParcela = totalParcelado / p;
                                   const taxaParcela = getCieloInstallmentRate(taxasCartao, bandeiraParaCalculo, p);
-                                  const semTaxas = !selectedPaymentOption || isInstallmentInterestFree(selectedPaymentOption, p) || taxaParcela === null || taxaParcela <= 0;
+                                  const semTaxas = !selectedPaymentOption || isInstallmentInterestFree(selectedPaymentOption, p, freeInstallmentsQtd) || taxaParcela === null || taxaParcela <= 0;
                                   return (
                                     <SelectItem key={p} value={p.toString()}>
                                       {p}x de R$ {valorParcela.toFixed(2)}
-                                      {semTaxas ? ' sem taxas' : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, p, selectedPaymentOption)})`}
+                                      {semTaxas ? ' sem taxas' : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, p, selectedPaymentOption, freeInstallmentsQtd)})`}
                                     </SelectItem>
                                   );
                                 })}

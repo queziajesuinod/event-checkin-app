@@ -81,9 +81,10 @@ export interface Event {
   thankYouUrl?: string | null;
   // Desconto automático por quantidade (sem cupom): preço-teto por ingresso quando
   // o pedido atinge a quantidade mínima da faixa. Configurado no admin do portal.
+  // priceEach e freeInstallments são opcionais (faixa pode ter só um dos dois).
   quantityDiscount?: {
     enabled?: boolean;
-    tiers?: Array<{ minQty: number; priceEach: number }>;
+    tiers?: Array<{ minQty: number; priceEach?: number | null; freeInstallments?: number | null }>;
   } | null;
   // Adicionais/bônus opcionais (quantidade livre). Somam por cima do ingresso,
   // fora do desconto por quantidade e do cupom.
@@ -295,6 +296,10 @@ export interface RegistrationDetails {
     registrationPaymentMode: 'SINGLE' | 'BALANCE_DUE';
     minDepositAmount?: string;
     maxPaymentCount?: number;
+    quantityDiscount?: {
+      enabled?: boolean;
+      tiers?: Array<{ minQty: number; priceEach?: number | null; freeInstallments?: number | null }>;
+    } | null;
   };
   finalPrice: number;
   paidTotal: number;

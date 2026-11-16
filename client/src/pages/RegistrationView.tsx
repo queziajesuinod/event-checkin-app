@@ -33,6 +33,7 @@ import {
   detectCardBrandKey,
   formatBrandInstallmentInterest,
   formatInstallmentInterest,
+  freeInstallmentsForQuantity,
   getCieloInstallmentRate,
   getInstallmentInterestRule,
   isInstallmentInterestFree,
@@ -360,6 +361,14 @@ export default function RegistrationView() {
   }, [sortedPayments]);
   const remainingSemJuros = Math.max(0, (Number(registration?.finalPrice) || 0) - paidSemJuros);
 
+  // Parcelas sem taxa liberadas pela QUANTIDADE do pedido (desconto por quantidade do
+  // evento): ex.: "acima de 30 itens → até 3x sem taxa". Eleva o limite sem juros da
+  // forma de pagamento, espelhando a cobrança do back-end.
+  const freeInstallmentsQtd = freeInstallmentsForQuantity(
+    registration?.event?.quantityDiscount,
+    registration?.attendees?.length ?? 0
+  );
+
   // Entrada abaixo do mínimo APROVADA: a primeira cobrança (ainda sem nenhum
   // pagamento confirmado) é travada no valor aprovado — sem campo aberto. Os
   // próximos pagamentos (saldo restante) seguem o fluxo normal (integral/outro).
@@ -517,7 +526,8 @@ export default function RegistrationView() {
             selectedPaymentOption,
             installments,
             taxasCartao,
-            bandeiraParaCalculo
+            bandeiraParaCalculo,
+            freeInstallmentsQtd
           )
         : 0;
       const totalAmount = Number((parsedAmount + feeAmount).toFixed(2));
@@ -971,12 +981,13 @@ export default function RegistrationView() {
                               selectedPaymentOption,
                               option,
                               taxasCartao,
-                              bandeiraParaCalculo
+                              bandeiraParaCalculo,
+                              freeInstallmentsQtd
                             );
                             const perInstallment = option > 0 ? totalParcelado / option : totalParcelado;
                             const taxaParcela = getCieloInstallmentRate(taxasCartao, bandeiraParaCalculo, option);
                             const semTaxas =
-                              isInstallmentInterestFree(selectedPaymentOption, option) ||
+                              isInstallmentInterestFree(selectedPaymentOption, option, freeInstallmentsQtd) ||
                               taxaParcela === null ||
                               taxaParcela <= 0;
                             return (
@@ -984,16 +995,16 @@ export default function RegistrationView() {
                                 {option}x de {formatCurrency(perInstallment)}
                                 {semTaxas
                                   ? ' sem taxas'
-                                  : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, option, selectedPaymentOption)})`}
+                                  : ` (${formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, option, selectedPaymentOption, freeInstallmentsQtd)})`}
                               </SelectItem>
                             );
                           })}
                         </SelectContent>
                       </Select>
-                      {!selectedPaymentOption.absorverTaxaParcelamento && !isInstallmentInterestFree(selectedPaymentOption, installments) && (
+                      {!selectedPaymentOption.absorverTaxaParcelamento && !isInstallmentInterestFree(selectedPaymentOption, installments, freeInstallmentsQtd) && (
                         <p className="text-xs text-muted-foreground">
                           Taxa de parcelamento repassada:{' '}
-                          {formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, installments, selectedPaymentOption)}
+                          {formatBrandInstallmentInterest(taxasCartao, bandeiraParaCalculo, installments, selectedPaymentOption, freeInstallmentsQtd)}
                         </p>
                       )}
                     </div>

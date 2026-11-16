@@ -146,25 +146,58 @@ const getInterestFreeUpTo = (option?: PaymentOption): number => {
   return Number.isFinite(value) && value >= 1 ? Math.trunc(value) : 1;
 };
 
-// Esta parcela é realmente SEM juros? Considera 1x, a opção que absorve a taxa e o
-// "juros só a partir da X parcela" (interestFreeUpToInstallments). Usado para NÃO
-// exibir taxa em parcelas que de fato não cobram juros.
+// Limite efetivo de parcelas sem juros: o MAIOR entre o da forma de pagamento e um
+// override por pedido (ex.: desconto por quantidade — "acima de X itens, até Nx sem taxa").
+const getEffectiveFreeUpTo = (option: PaymentOption | undefined, freeUpToOverride = 0): number => {
+  const override = Math.trunc(Number(freeUpToOverride) || 0);
+  return Math.max(getInterestFreeUpTo(option), override);
+};
+
+// Parcelas sem taxa liberadas pela QUANTIDADE do pedido (desconto por quantidade do
+// evento): maior freeInstallments entre as faixas cujo minQty a quantidade atinge.
+// 0 = sem benefício. Espelha o back-end (volumeDiscountService.parcelasSemTaxaParaQuantidade).
+export const freeInstallmentsForQuantity = (
+  quantityDiscount:
+    | { enabled?: boolean; tiers?: Array<{ minQty: number; freeInstallments?: number | null }> }
+    | null
+    | undefined,
+  quantity: number
+): number => {
+  if (!quantityDiscount || quantityDiscount.enabled === false || !Array.isArray(quantityDiscount.tiers)) {
+    return 0;
+  }
+  const qtd = Number(quantity) || 0;
+  let maxFree = 0;
+  quantityDiscount.tiers.forEach((t) => {
+    const n = Number(t?.freeInstallments);
+    if (qtd >= Number(t?.minQty) && Number.isFinite(n) && n >= 2 && n > maxFree) {
+      maxFree = n;
+    }
+  });
+  return maxFree;
+};
+
+// Esta parcela é realmente SEM juros? Considera 1x, a opção que absorve a taxa, o
+// "juros só a partir da X parcela" (interestFreeUpToInstallments) e o override por
+// quantidade. Usado para NÃO exibir taxa em parcelas que de fato não cobram juros.
 export const isInstallmentInterestFree = (
   option: PaymentOption | undefined,
-  installments: number
+  installments: number,
+  freeUpToOverride = 0
 ): boolean => {
   if (installments <= 1) return true;
   if (option?.absorverTaxaParcelamento) return true;
-  return installments <= getInterestFreeUpTo(option);
+  return installments <= getEffectiveFreeUpTo(option, freeUpToOverride);
 };
 
 export const applyInstallmentInterest = (
   baseAmount: number,
   option: PaymentOption | undefined,
-  installments: number
+  installments: number,
+  freeUpToOverride = 0
 ): number => {
   const safeBase = Math.max(0, baseAmount);
-  if (installments <= getInterestFreeUpTo(option)) return safeBase;
+  if (installments <= getEffectiveFreeUpTo(option, freeUpToOverride)) return safeBase;
   const rule = getInstallmentInterestRule(option, installments);
   if (rule.interestRate <= 0 || installments <= 1) return safeBase;
   if (rule.interestType === 'fixed') return safeBase + rule.interestRate;
@@ -174,10 +207,11 @@ export const applyInstallmentInterest = (
 export const calculateInstallmentInterestAmount = (
   baseAmount: number,
   option: PaymentOption | undefined,
-  installments: number
+  installments: number,
+  freeUpToOverride = 0
 ): number => {
   const safeBase = Math.max(0, baseAmount);
-  const totalWithInterest = applyInstallmentInterest(safeBase, option, installments);
+  const totalWithInterest = applyInstallmentInterest(safeBase, option, installments, freeUpToOverride);
   return Number(Math.max(0, totalWithInterest - safeBase).toFixed(2));
 };
 
@@ -241,12 +275,13 @@ export const applyBrandInstallmentInterest = (
   option: PaymentOption | undefined,
   installments: number,
   rates: CieloFeeRates | undefined,
-  brandKey: string
+  brandKey: string,
+  freeUpToOverride = 0
 ): number => {
   const safeBase = Math.max(0, baseAmount);
   if (!option || option.paymentType !== 'credit_card' || installments <= 1) return safeBase;
-  // Parcelas sem juros até X: quem parcela até esse limite não paga juros.
-  if (installments <= getInterestFreeUpTo(option)) return safeBase;
+  // Parcelas sem juros até X (forma de pagamento OU override por quantidade).
+  if (installments <= getEffectiveFreeUpTo(option, freeUpToOverride)) return safeBase;
   if (option.absorverTaxaParcelamento) return safeBase;
 
   const rate = getCieloInstallmentRate(rates, brandKey, installments);
@@ -255,7 +290,7 @@ export const applyBrandInstallmentInterest = (
   }
 
   // Sem taxa Cielo disponível: cai no juros configurado no evento (legado).
-  return applyInstallmentInterest(safeBase, option, installments);
+  return applyInstallmentInterest(safeBase, option, installments, freeUpToOverride);
 };
 
 export const calculateBrandInstallmentInterestAmount = (
@@ -263,10 +298,11 @@ export const calculateBrandInstallmentInterestAmount = (
   option: PaymentOption | undefined,
   installments: number,
   rates: CieloFeeRates | undefined,
-  brandKey: string
+  brandKey: string,
+  freeUpToOverride = 0
 ): number => {
   const safeBase = Math.max(0, baseAmount);
-  const total = applyBrandInstallmentInterest(safeBase, option, installments, rates, brandKey);
+  const total = applyBrandInstallmentInterest(safeBase, option, installments, rates, brandKey, freeUpToOverride);
   return Number(Math.max(0, total - safeBase).toFixed(2));
 };
 
@@ -274,11 +310,12 @@ export const formatBrandInstallmentInterest = (
   rates: CieloFeeRates | undefined,
   brandKey: string,
   installments: number,
-  option?: PaymentOption
+  option?: PaymentOption,
+  freeUpToOverride = 0
 ): string => {
-  // Parcela sem juros de fato (1x, absorve taxa, ou dentro do "juros a partir da X"):
-  // não mostra taxa, mesmo que exista uma taxa cadastrada para essa parcela.
-  if (option && isInstallmentInterestFree(option, installments)) return 'sem taxas';
+  // Parcela sem juros de fato (1x, absorve taxa, "juros a partir da X", ou liberada
+  // pela quantidade): não mostra taxa, mesmo que exista taxa cadastrada para ela.
+  if (option && isInstallmentInterestFree(option, installments, freeUpToOverride)) return 'sem taxas';
   const rate = getCieloInstallmentRate(rates, brandKey, installments);
   if (rate === null || rate <= 0) return 'sem taxas';
   return `taxa ${rate.toFixed(2).replace('.', ',')}%`;
