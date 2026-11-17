@@ -23,6 +23,7 @@ import CheckIn from "./pages/CheckIn";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import RegistroCulto from "./pages/RegistroCulto";
+import CultosLista from "./pages/CultosLista";
 import VoluntariadoPublico from "./pages/VoluntariadoPublico";
 import CelulaLider from "./pages/CelulaLider";
 import CelulaPresenca from "./pages/CelulaPresenca";
@@ -64,6 +65,7 @@ function Router() {
       <Route path={"/profile"} component={() => <ProtectedRoute component={Profile} />} />
       <Route path={"/checkin/:eventId"} component={() => <ProtectedRoute component={CheckIn} />} />
       <Route path={"/cultos"} component={() => <ProtectedRoute component={RegistroCulto} />} />
+      <Route path={"/cultos/lista"} component={() => <ProtectedRoute component={CultosLista} />} />
       <Route path={"/cultos/:id"} component={() => <ProtectedRoute component={RegistroCulto} />} />
       <Route path={"/voluntariado"} component={VoluntariadoPublico} />
       <Route path={"/voluntariado/"} component={VoluntariadoPublico} />

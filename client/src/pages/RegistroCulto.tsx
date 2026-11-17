@@ -3,9 +3,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useHeader } from '@/contexts/HeaderContext';
 import { cultosAPI, type Campus, type Ministerio, type TipoEvento, type Ministro, type RegistroCulto, type VoluntariadoInfo } from '@/lib/api';
-import { BookOpen, CalendarDays, Check, ChevronDown, CloudOff, Copy, Download, Loader2, MapPin, MessageSquare, Minus, Plus, Users, Wifi, WifiOff, X } from 'lucide-react';
+import { BookOpen, CalendarDays, Check, ChevronDown, CloudOff, Copy, Download, ListChecks, Loader2, Lock, MapPin, MessageSquare, Minus, Plus, Users, Wifi, WifiOff, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
+import { isMesVigente } from './CultosLista';
 import { toast } from 'sonner';
 import { Command, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -279,6 +280,8 @@ const RegistroCulto = () => {
     savedOffline?: boolean;
   }
   const [savedSnapshot, setSavedSnapshot] = useState<SavedSnapshot | null>(null);
+  // Edição bloqueada: registro de mês anterior não pode ser alterado.
+  const [edicaoBloqueada, setEdicaoBloqueada] = useState(false);
 
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
@@ -343,6 +346,11 @@ const RegistroCulto = () => {
     cultosAPI.buscarRegistro(params.id!)
       .then((response) => {
         const registro = response.data;
+        // Só é possível editar cultos do mês vigente. Mês passado → bloqueia.
+        if (!isMesVigente(registro.data)) {
+          setEdicaoBloqueada(true);
+          return;
+        }
         setForm({
           data: registro.data || hoje(),
           horario: registro.horario || '',
@@ -500,6 +508,10 @@ const RegistroCulto = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isEditing && !isMesVigente(form.data)) {
+      toast.error('Só é possível editar cultos do mês vigente.');
+      return;
+    }
     if (selectedMinistros.length === 0) {
       toast.error('Selecione ao menos um ministro');
       return;
@@ -553,6 +565,35 @@ const RegistroCulto = () => {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (edicaoBloqueada) {
+    return (
+      <div className="portal-page min-h-screen flex flex-col" style={{ backgroundColor: C.surface }}>
+        <div className="flex-1 w-full max-w-2xl mx-auto px-4 pt-10 pb-10 flex flex-col items-center text-center">
+          <div
+            className="w-20 h-20 rounded-full flex items-center justify-center mb-5"
+            style={{ backgroundColor: '#FEF3C7' }}
+          >
+            <Lock className="w-9 h-9" style={{ color: '#D97706' }} />
+          </div>
+          <h2 className="text-2xl font-extrabold mb-2" style={{ color: C.navy }}>
+            Edição indisponível
+          </h2>
+          <p className="text-sm max-w-sm" style={{ color: '#6B7280' }}>
+            Este registro é de um mês anterior. Só é possível editar cultos do mês vigente.
+          </p>
+          <button
+            onClick={() => setLocation('/cultos/lista')}
+            className="mt-8 w-full max-w-xs h-12 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98]"
+            style={{ backgroundColor: C.blue }}
+          >
+            <ListChecks className="w-4 h-4" />
+            Ver registros do mês
+          </button>
+        </div>
       </div>
     );
   }
@@ -764,13 +805,26 @@ const RegistroCulto = () => {
 
       <div className="w-full max-w-2xl mx-auto px-4 pt-6">
         {/* Título da página */}
-        <div className="portal-heading">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: C.gold }}>
-            {isEditing ? 'Editando registro' : 'Novo registro'}
-          </p>
-          <h1 className="text-2xl font-extrabold" style={{ color: C.navy }}>
-            {isEditing ? 'Editar Culto' : 'Registrar Culto'}
-          </h1>
+        <div className="portal-heading flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: C.gold }}>
+              {isEditing ? 'Editando registro' : 'Novo registro'}
+            </p>
+            <h1 className="text-2xl font-extrabold" style={{ color: C.navy }}>
+              {isEditing ? 'Editar Culto' : 'Registrar Culto'}
+            </h1>
+          </div>
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={() => setLocation('/cultos/lista')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all duration-150 active:scale-95"
+              style={{ backgroundColor: C.white, color: C.blue, border: `1.5px solid ${C.blue}` }}
+            >
+              <ListChecks className="w-4 h-4" />
+              Registros do mês
+            </button>
+          )}
         </div>
 
         <form id="form-culto" onSubmit={handleSubmit} className="space-y-4">
@@ -1076,7 +1130,7 @@ const RegistroCulto = () => {
       >
         <button
           type="button"
-          onClick={() => setLocation('/cultos')}
+          onClick={() => setLocation('/cultos/lista')}
           className="flex-1 h-12 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
           style={{ backgroundColor: C.surface, color: C.blue, border: `1.5px solid ${C.blue}` }}
         >
